@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Outer Shield Contour -->
+    <path
+        android:pathData="M54,26 L78,35 C78,56 67.5,73 54,82 C40.5,73 30,56 30,35 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="30"
+                android:startY="26"
+                android:endX="78"
+                android:endY="82"
+                android:type="linear">
+                <item android:offset="0.0" android:color="#00E5FF" />
+                <item android:offset="1.0" android:color="#0284C7" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <!-- Inner Dark Shield Plate -->
+    <path
+        android:pathData="M54,31 L73,38.5 C73,55.5 64.5,69 54,76.5 C43.5,69 35,55.5 35,38.5 Z"
+        android:fillColor="#0B132B" />
+    <!-- Firewall Circuit Matrix Lines inside shield -->
+    <path
+        android:pathData="M54,38 L54,70 M44,48 L64,48 M42,58 L66,58"
+        android:strokeColor="#38BDF8"
+        android:strokeWidth="2.2"
+        android:strokeLineCap="round" />
+    <!-- Center Glowing Pulse / Core -->
+    <path
+        android:pathData="M54,48 M51,48 A3,3 0 1,0 57,48 A3,3 0 1,0 51,48"
+        android:fillColor="#FFFFFF" />
+    <!-- Digital Padlock Shackle -->
+    <path
+        android:pathData="M48,56 C48,52.5 50,50 54,50 C58,50 60,52.5 60,56 L60,60 L48,60 Z"
+        android:fillColor="#38BDF8" />
+    <!-- Lock Body -->
+    <path
+        android:pathData="M46,60 L62,60 L62,70 L46,70 Z"
+        android:fillColor="#FFFFFF" />
+    <path
+        android:pathData="M54,63 L54,67"
+        android:strokeColor="#0B132B"
+        android:strokeWidth="2"
+        android:strokeLineCap="round" />
+</vector>
+

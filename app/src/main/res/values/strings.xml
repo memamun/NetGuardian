@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">NetGuardian</string>
+    <string name="quick_settings_tile_name">Firewall</string>
+    <string name="quick_settings_tile_firewall">Firewall</string>
+    <string name="quick_settings_tile_block_all">Block All</string>
+    <string name="quick_settings_tile_wifi_only">Wi-Fi Only</string>
+    <string name="quick_settings_tile_mobile_data">Mobile Data</string>
+</resources>
