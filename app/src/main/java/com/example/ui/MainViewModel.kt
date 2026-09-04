@@ -131,6 +131,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         initialValue = emptyList()
     )
 
+    val recentLogsPreview: StateFlow<List<ConnectionLogEntity>> = dao.getRecentLogs(4).stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
+
     val filteredLogs: StateFlow<List<ConnectionLogEntity>> = combine(
         recentLogs,
         logFilter,
@@ -209,105 +215,105 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun updateAppRule(rule: AppRuleEntity) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             appRepo.updateRule(rule)
             firewallManager.notifyRulesChanged()
         }
     }
 
     fun toggleAppBlock(rule: AppRuleEntity) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             appRepo.toggleBlock(rule)
             firewallManager.notifyRulesChanged()
         }
     }
 
     fun toggleAppWifi(rule: AppRuleEntity) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             appRepo.toggleWifi(rule)
             firewallManager.notifyRulesChanged()
         }
     }
 
     fun toggleAppMobile(rule: AppRuleEntity) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             appRepo.toggleMobile(rule)
             firewallManager.notifyRulesChanged()
         }
     }
 
     fun toggleAppBackground(rule: AppRuleEntity) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             appRepo.toggleBackground(rule)
             firewallManager.notifyRulesChanged()
         }
     }
 
     fun toggleAppScreenOff(rule: AppRuleEntity) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             appRepo.toggleScreenOff(rule)
             firewallManager.notifyRulesChanged()
         }
     }
 
     fun toggleAppDeviceIdle(rule: AppRuleEntity) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             appRepo.toggleDeviceIdle(rule)
             firewallManager.notifyRulesChanged()
         }
     }
 
     fun toggleAppTrackers(rule: AppRuleEntity) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             appRepo.toggleTrackers(rule)
             firewallManager.notifyRulesChanged()
         }
     }
 
     fun blockAllNonSystem(block: Boolean) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             appRepo.blockAllNonSystem(block)
             firewallManager.notifyRulesChanged()
         }
     }
 
     fun allowAllApps() {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             appRepo.allowAllApps()
             firewallManager.notifyRulesChanged()
         }
     }
 
     fun setBlockAllBackground(block: Boolean) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             appRepo.setBlockAllBackground(block)
             firewallManager.notifyRulesChanged()
         }
     }
 
     fun setBlockAllScreenOff(block: Boolean) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             appRepo.setBlockAllScreenOff(block)
             firewallManager.notifyRulesChanged()
         }
     }
 
     fun setBlockAllDeviceIdle(block: Boolean) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             appRepo.setBlockAllDeviceIdle(block)
             firewallManager.notifyRulesChanged()
         }
     }
 
     fun setUpstreamDnsType(type: UpstreamDnsType) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             prefsRepo.setUpstreamDnsType(type)
             firewallManager.notifyRulesChanged()
         }
     }
 
     fun setCustomDnsIp(ip: String) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             prefsRepo.setCustomDnsIp(ip)
             firewallManager.notifyRulesChanged()
         }
@@ -357,26 +363,26 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun setStartOnBoot(enabled: Boolean) {
-        viewModelScope.launch { prefsRepo.setStartOnBoot(enabled) }
+        viewModelScope.launch(Dispatchers.IO) { prefsRepo.setStartOnBoot(enabled) }
     }
 
     fun setPersistentNotification(enabled: Boolean) {
-        viewModelScope.launch { prefsRepo.setPersistentNotification(enabled) }
+        viewModelScope.launch(Dispatchers.IO) { prefsRepo.setPersistentNotification(enabled) }
     }
 
     fun setBlockNewApps(enabled: Boolean) {
-        viewModelScope.launch { prefsRepo.setBlockNewAppsByDefault(enabled) }
+        viewModelScope.launch(Dispatchers.IO) { prefsRepo.setBlockNewAppsByDefault(enabled) }
     }
 
     fun setDnsFiltering(enabled: Boolean) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             prefsRepo.setDnsFilteringEnabled(enabled)
             firewallManager.notifyRulesChanged()
         }
     }
 
     fun setThemeMode(mode: String) {
-        viewModelScope.launch { prefsRepo.setThemeMode(mode) }
+        viewModelScope.launch(Dispatchers.IO) { prefsRepo.setThemeMode(mode) }
     }
 
     fun resetRulesToDefault() {
@@ -467,13 +473,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun completeOnboarding(policy: String = "ALLOW_ALL") {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             prefsRepo.setOnboardingCompleted(true)
             prefsRepo.setDefaultRulePolicy(policy)
             if (policy == "BLOCK_NEW") {
                 prefsRepo.setBlockNewAppsByDefault(true)
             } else if (policy == "ALLOW_ALL") {
-                // Ensure safe defaults
                 appRepo.allowAllApps()
                 firewallManager.notifyRulesChanged()
             }
@@ -481,13 +486,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun setHasSeenAppManagerExplanation(seen: Boolean) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             prefsRepo.setHasSeenAppManagerExplanation(seen)
         }
     }
 
     fun setHasConfirmedFirewallStartup(confirmed: Boolean) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             prefsRepo.setHasConfirmedFirewallStartup(confirmed)
         }
     }

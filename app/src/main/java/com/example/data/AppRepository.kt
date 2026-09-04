@@ -26,8 +26,9 @@ class AppRepository(
     private val iconCache = LruCache<String, Bitmap>(150)
 
     // Combined Flow: Installed apps with dynamic live rules from Room
+    // Icons are NOT loaded here — they are fetched lazily in Compose to avoid
+    // blocking the main thread and to prevent Bitmap from preventing recomposition skips.
     val appsFlow: Flow<List<AppItem>> = firewallDao.getAllRules().combine(
-        // We emit installed apps snapshot
         kotlinx.coroutines.flow.flow {
             emit(loadInstalledPackages())
         }
@@ -53,7 +54,6 @@ class AppRepository(
                 isSystemApp = raw.isSystemApp,
                 hasInternetPermission = raw.hasInternetPermission,
                 versionName = raw.versionName,
-                iconBitmap = getAppIcon(raw.packageName),
                 rule = rule
             )
         }.sortedWith(compareBy({ !it.rule.isBlocked }, { it.isSystemApp }, { it.appName.lowercase() }))

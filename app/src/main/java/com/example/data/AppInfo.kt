@@ -1,6 +1,5 @@
 package com.example.data
 
-import android.graphics.Bitmap
 import com.example.database.AppRuleEntity
 
 data class AppItem(
@@ -10,6 +9,5 @@ data class AppItem(
     val isSystemApp: Boolean,
     val hasInternetPermission: Boolean,
     val versionName: String,
-    val iconBitmap: Bitmap?,
     val rule: AppRuleEntity
 )

@@ -70,11 +70,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -85,6 +88,30 @@ import com.example.database.AppRuleEntity
 import com.example.ui.AppFilter
 import com.example.ui.MainViewModel
 import com.example.ui.theme.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+
+@Composable
+private fun rememberAppIcon(packageName: String): Bitmap? {
+    var icon by remember(packageName) { mutableStateOf<Bitmap?>(null) }
+    val context = LocalContext.current
+    LaunchedEffect(packageName) {
+        withContext(Dispatchers.IO) {
+            try {
+                val pm = context.packageManager
+                val drawable = pm.getApplicationIcon(packageName)
+                val width = if (drawable.intrinsicWidth > 0) drawable.intrinsicWidth else 72
+                val height = if (drawable.intrinsicHeight > 0) drawable.intrinsicHeight else 72
+                val bitmap = android.graphics.Bitmap.createBitmap(width, height, android.graphics.Bitmap.Config.ARGB_8888)
+                val canvas = android.graphics.Canvas(bitmap)
+                drawable.setBounds(0, 0, canvas.width, canvas.height)
+                drawable.draw(canvas)
+                icon = bitmap
+            } catch (_: Exception) {}
+        }
+    }
+    return icon
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -394,9 +421,10 @@ fun AppItemCard(
                     .background(MaterialTheme.colorScheme.surfaceVariant),
                 contentAlignment = Alignment.Center
             ) {
-                if (app.iconBitmap != null) {
+                val icon = rememberAppIcon(app.packageName)
+                if (icon != null) {
                     Image(
-                        bitmap = app.iconBitmap.asImageBitmap(),
+                        bitmap = icon.asImageBitmap(),
                         contentDescription = "${app.appName} Icon",
                         modifier = Modifier.size(34.dp)
                     )
@@ -556,9 +584,10 @@ fun AppDetailSheetContent(
                     .background(MaterialTheme.colorScheme.surfaceVariant),
                 contentAlignment = Alignment.Center
             ) {
-                if (app.iconBitmap != null) {
+                val icon = rememberAppIcon(app.packageName)
+                if (icon != null) {
                     Image(
-                        bitmap = app.iconBitmap.asImageBitmap(),
+                        bitmap = icon.asImageBitmap(),
                         contentDescription = "${app.appName} Icon",
                         modifier = Modifier.size(44.dp)
                     )
@@ -927,9 +956,10 @@ fun AppBackgroundItemCard(
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 // App Icon
-                if (app.iconBitmap != null) {
+                val bgIcon = rememberAppIcon(app.packageName)
+                if (bgIcon != null) {
                     Image(
-                        bitmap = app.iconBitmap.asImageBitmap(),
+                        bitmap = bgIcon.asImageBitmap(),
                         contentDescription = "${app.appName} icon",
                         modifier = Modifier
                             .size(42.dp)

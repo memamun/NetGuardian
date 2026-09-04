@@ -89,12 +89,11 @@ fun DashboardScreen(
     val isFirewallActive by viewModel.firewallActive.collectAsStateWithLifecycle()
     val snapshot by viewModel.firewallSnapshot.collectAsStateWithLifecycle()
     val networkType by viewModel.networkType.collectAsStateWithLifecycle()
-    val isScreenOn by viewModel.isScreenOn.collectAsStateWithLifecycle()
     val quickMode by viewModel.activeQuickMode.collectAsStateWithLifecycle()
     val blockedAppsCount by viewModel.blockedAppsCount.collectAsStateWithLifecycle()
     val allowedAppsCount by viewModel.allowedAppsCount.collectAsStateWithLifecycle()
     val todayBlockedCount by viewModel.todayBlockedCount.collectAsStateWithLifecycle()
-    val recentLogs by viewModel.recentLogs.collectAsStateWithLifecycle()
+    val recentLogs by viewModel.recentLogsPreview.collectAsStateWithLifecycle()
     val userPrefs by viewModel.userPreferences.collectAsStateWithLifecycle()
 
     var showStartupSafetyDialog by remember { mutableStateOf(false) }
@@ -238,7 +237,7 @@ fun DashboardScreen(
         // 4. Live Connection Activity Feed Preview
         item {
             RecentActivityPreviewCard(
-                logs = recentLogs.take(4),
+                logs = recentLogs,
                 onViewAllLogs = onNavigateToLogs
             )
         }
