@@ -48,6 +48,16 @@ data class UserPreferences(
 
 class PreferencesRepository(private val context: Context) {
 
+    private val syncPrefs = context.getSharedPreferences("netguardian_sync_prefs", Context.MODE_PRIVATE)
+
+    fun isOnboardingCompletedSync(): Boolean {
+        return syncPrefs.getBoolean("onboarding_completed", false)
+    }
+
+    fun hasSyncOnboardingState(): Boolean {
+        return syncPrefs.contains("onboarding_completed")
+    }
+
     private object Keys {
         val FIREWALL_ENABLED = booleanPreferencesKey("firewall_enabled")
         val START_ON_BOOT = booleanPreferencesKey("start_on_boot")
@@ -68,6 +78,10 @@ class PreferencesRepository(private val context: Context) {
     }
 
     val userPreferencesFlow: Flow<UserPreferences> = context.dataStore.data.map { prefs ->
+        val completed = prefs[Keys.ONBOARDING_COMPLETED] ?: false
+        if (syncPrefs.getBoolean("onboarding_completed", false) != completed) {
+            syncPrefs.edit().putBoolean("onboarding_completed", completed).commit()
+        }
         UserPreferences(
             firewallEnabled = prefs[Keys.FIREWALL_ENABLED] ?: false,
             startOnBoot = prefs[Keys.START_ON_BOOT] ?: false,
@@ -89,7 +103,7 @@ class PreferencesRepository(private val context: Context) {
             } catch (_: Exception) {
                 QuickMode.NORMAL
             },
-            onboardingCompleted = prefs[Keys.ONBOARDING_COMPLETED] ?: false,
+            onboardingCompleted = completed,
             defaultRulePolicy = prefs[Keys.DEFAULT_RULE_POLICY] ?: "ALLOW_ALL",
             hasSeenAppManagerExplanation = prefs[Keys.HAS_SEEN_APP_MANAGER_EXPLANATION] ?: false,
             hasConfirmedFirewallStartup = prefs[Keys.HAS_CONFIRMED_FIREWALL_STARTUP] ?: false
@@ -145,6 +159,7 @@ class PreferencesRepository(private val context: Context) {
     }
 
     suspend fun setOnboardingCompleted(completed: Boolean) {
+        syncPrefs.edit().putBoolean("onboarding_completed", completed).commit()
         context.dataStore.edit { it[Keys.ONBOARDING_COMPLETED] = completed }
     }
 

@@ -14,13 +14,19 @@ val SleekPrimaryText = Color(0xFF001D36)
 val SleekBodyText = Color(0xFF1A1C1E)
 val SleekMutedText = Color(0xFF44474E)
 
-// Light Surfaces & Outlines
+// Light Surfaces & Outlines (M3 Tone-based Containers)
 val SleekBackground = Color(0xFFFDFBFF)
 val SleekSurface = Color(0xFFFFFFFF)
 val SleekSurfaceVariant = Color(0xFFF0F4F8)
 val SleekCardBackground = Color(0xFFF0F4F8)
 val SleekBorder = Color(0xFFC2C7CF)
 val SleekDivider = Color(0x80C2C7CF)
+
+val LightSurfaceContainerLowest = Color(0xFFFFFFFF)
+val LightSurfaceContainerLow = Color(0xFFF7F9FC)
+val LightSurfaceContainer = Color(0xFFF0F4F8)
+val LightSurfaceContainerHigh = Color(0xFFE8EEF4)
+val LightSurfaceContainerHighest = Color(0xFFDFE6EF)
 
 // Dark Theme Surfaces & Outlines (Slate Obsidian & Deep Navy)
 val DarkBackground = Color(0xFF090E17)
@@ -30,6 +36,15 @@ val DarkSurfaceElevated = Color(0xFF1E2B3E)
 val DarkCardBackground = Color(0xFF141D2C)
 val DarkBorder = Color(0xFF2A394E)
 val DarkDivider = Color(0xFF223044)
+
+val DarkSurfaceContainerLowest = Color(0xFF070C13)
+val DarkSurfaceContainerLow = Color(0xFF0E1522)
+val DarkSurfaceContainer = Color(0xFF141D2C)
+val DarkSurfaceContainerHigh = Color(0xFF1A2536)
+val DarkSurfaceContainerHighest = Color(0xFF223044)
+
+// Scrim (32% opacity per M3 specification)
+val M3Scrim = Color(0x52000000)
 
 // Dark Theme Primary & Secondary
 val DarkPrimary = Color(0xFF70B6FF)
@@ -105,3 +120,8 @@ val SleekInactiveContainer = Color(0xFFEEF2F6)
 
 
 
+
+// My design decision (not in M3): brand-specific control outlines, distinct from
+// the lower-contrast card/divider palette.
+val LightControlOutline = Color(0xFF74777F)
+val DarkControlOutline = Color(0xFF8993A3)

@@ -1,5 +1,11 @@
 package com.example.ui.privacy
 
+
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.Role
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -41,10 +47,20 @@ import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.material3.Text
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.res.stringResource
+import com.example.ui.components.DnsAddressField
+import com.example.R
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -69,8 +85,10 @@ fun PrivacyScreen(
 ) {
     val blocklist by viewModel.blocklist.collectAsStateWithLifecycle()
     val prefs by viewModel.userPreferences.collectAsStateWithLifecycle()
+    val dnsLabel = stringResource(R.string.ui_dns_filtering)
+    val haptic = LocalHapticFeedback.current
 
-    var newDomainText by remember { mutableStateOf("") }
+    var newDomainText by rememberSaveable { mutableStateOf("") }
 
     val adDomains = remember(blocklist) { blocklist.filter { it.category == "AD" } }
     val trackerDomains = remember(blocklist) { blocklist.filter { it.category == "TRACKER" } }
@@ -85,8 +103,8 @@ fun PrivacyScreen(
         modifier = modifier
             .fillMaxSize()
             .testTag("privacy_screen"),
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        contentPadding = PaddingValues(AppSpacing.content),
+        verticalArrangement = Arrangement.spacedBy(AppSpacing.content)
     ) {
         // Master DNS Toggle Card
         item {
@@ -94,7 +112,7 @@ fun PrivacyScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .testTag("master_dns_card"),
-                shape = RoundedCornerShape(20.dp),
+                shape = M3ShapesTokens.CornerLargeIncreased,
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surface
                 ),
@@ -108,13 +126,13 @@ fun PrivacyScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(AppSpacing.medium),
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.weight(1f)
                     ) {
                         Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = if (prefs.dnsFilteringEnabled) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+                            shape = opticalInnerShape(20.dp, 18.dp),
+                            color = if (prefs.dnsFilteringEnabled) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerLow,
                             modifier = Modifier.size(42.dp)
                         ) {
                             Box(contentAlignment = Alignment.Center) {
@@ -131,31 +149,30 @@ fun PrivacyScreen(
                             modifier = Modifier.weight(1f, fill = false)
                         ) {
                             Text(
-                                text = "DNS Filtering",
+                                text = stringResource(R.string.ui_dns_filtering),
                                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                                color = MaterialTheme.colorScheme.onSurface,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
-                                text = "Intercepts and sinkholes tracking requests locally on-device",
+                                text = if (prefs.dnsFilteringEnabled) "Active • Blocking known ad & telemetry domains" else "Disabled • DNS requests pass unfiltered",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 2,
-                                overflow = TextOverflow.Ellipsis
+                                color = if (prefs.dnsFilteringEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                     }
-                    Spacer(modifier = Modifier.width(8.dp))
                     Switch(
                         checked = prefs.dnsFilteringEnabled,
-                        onCheckedChange = { viewModel.setDnsFiltering(it) },
+                        onCheckedChange = {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            viewModel.setDnsFiltering(it)
+                        },
                         colors = SwitchDefaults.colors(
                             checkedThumbColor = MaterialTheme.colorScheme.primary,
                             checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
                             uncheckedThumbColor = MaterialTheme.colorScheme.outline,
-                            uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant
-                        )
+                            uncheckedTrackColor = MaterialTheme.colorScheme.surfaceContainerLow
+                        ),
+                        modifier = Modifier.testTag("dns_toggle_switch").semantics { contentDescription = dnsLabel }
                     )
                 }
             }
@@ -164,7 +181,7 @@ fun PrivacyScreen(
         // Protection Categories Section
         item {
             Text(
-                text = "BUILT-IN PROTECTION RULES",
+                text = stringResource(R.string.ui_built_in_protection_rules),
                 style = MaterialTheme.typography.labelMedium.copy(
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 0.8.sp
@@ -206,11 +223,11 @@ fun PrivacyScreen(
             )
         }
 
-        // Custom Blocklist Section
+        // Section Title: Custom Rules
         item {
             Text(
-                text = "CUSTOM DOMAIN BLOCKLIST",
-                style = MaterialTheme.typography.labelMedium.copy(
+                text = stringResource(R.string.ui_custom_domain_blocklist),
+                style = MaterialTheme.typography.labelSmall.copy(
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 0.8.sp
                 ),
@@ -221,36 +238,38 @@ fun PrivacyScreen(
         item {
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
+                shape = M3ShapesTokens.CornerLargeIncreased,
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    modifier = Modifier.padding(AppSpacing.content),
+                    verticalArrangement = Arrangement.spacedBy(AppSpacing.medium)
                 ) {
                     Text(
-                        text = "Add Custom Block Rule",
+                        text = stringResource(R.string.ui_add_custom_block_rule),
                         style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(AppSpacing.small),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         OutlinedTextField(
                             value = newDomainText,
                             onValueChange = { newDomainText = it },
-                            placeholder = { Text("e.g. tracking.example.com", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant) },
+                            label = { Text(stringResource(R.string.domain_label)) },
+                            placeholder = { Text(stringResource(R.string.ui_tracking_example_com)) },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
                             singleLine = true,
-                            shape = RoundedCornerShape(12.dp),
+                            shape = M3ShapesTokens.CornerSmall,
                             modifier = Modifier.weight(1f),
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = MaterialTheme.colorScheme.primary,
                                 unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
-                                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant
+                                focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow
                             )
                         )
                         Button(
@@ -260,10 +279,12 @@ fun PrivacyScreen(
                                     newDomainText = ""
                                 }
                             },
-                            shape = RoundedCornerShape(12.dp),
+                            enabled = newDomainText.isNotBlank(),
+                            shape = M3ShapesTokens.CornerFull,
+                            contentPadding = PaddingValues(horizontal = 16.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary)
                         ) {
-                            Icon(Icons.Default.Add, contentDescription = "Add")
+                            Icon(Icons.Default.Add, contentDescription = stringResource(R.string.add_domain))
                         }
                     }
                 }
@@ -274,7 +295,7 @@ fun PrivacyScreen(
         if (customDomains.isEmpty()) {
             item {
                 Text(
-                    text = "No custom block rules added yet.",
+                    text = stringResource(R.string.ui_no_custom_block_rules_added_yet),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 8.dp)
@@ -293,7 +314,7 @@ fun PrivacyScreen(
         // Upstream DNS Resolver (Local First, Zero Mandatory Third-Party Servers)
         item {
             Text(
-                text = "UPSTREAM DNS RESOLVER",
+                text = stringResource(R.string.ui_upstream_dns_resolver),
                 style = MaterialTheme.typography.labelMedium.copy(
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 0.8.sp
@@ -307,21 +328,21 @@ fun PrivacyScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .testTag("upstream_dns_card"),
-                shape = RoundedCornerShape(16.dp),
+                shape = M3ShapesTokens.CornerLargeIncreased,
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    modifier = Modifier.padding(AppSpacing.content),
+                    verticalArrangement = Arrangement.spacedBy(AppSpacing.medium)
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(AppSpacing.medium),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Surface(
-                            shape = RoundedCornerShape(10.dp),
+                            shape = opticalInnerShape(20.dp, 16.dp),
                             color = MaterialTheme.colorScheme.primaryContainer,
                             modifier = Modifier.size(38.dp)
                         ) {
@@ -339,12 +360,12 @@ fun PrivacyScreen(
                             modifier = Modifier.weight(1f)
                         ) {
                             Text(
-                                text = "Upstream DNS Resolver",
+                                text = stringResource(R.string.ui_upstream_dns_resolver_2),
                                 style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
-                                text = "Choose where allowed domain queries resolve. No third-party tracking required.",
+                                text = stringResource(R.string.ui_choose_where_allowed_domain_queries_resolve_no),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 lineHeight = 16.sp
@@ -352,15 +373,20 @@ fun PrivacyScreen(
                         }
                     }
 
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Column(modifier = Modifier.selectableGroup(), verticalArrangement = Arrangement.spacedBy(AppSpacing.small)) {
                         for (dnsOption in UpstreamDnsType.values()) {
                             val isSelected = prefs.upstreamDnsType == dnsOption
                             Surface(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { viewModel.setUpstreamDnsType(dnsOption) },
-                                shape = RoundedCornerShape(12.dp),
-                                color = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                                modifier = Modifier.fillMaxWidth().selectable(
+                                    selected = isSelected,
+                                    role = Role.RadioButton,
+                                    onClick = {
+                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        viewModel.setUpstreamDnsType(dnsOption)
+                                    }
+                                ),
+                                shape = opticalInnerShape(20.dp, 8.dp),
+                                color = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f) else MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.6f),
                                 border = androidx.compose.foundation.BorderStroke(
                                     1.dp,
                                     if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent
@@ -369,12 +395,12 @@ fun PrivacyScreen(
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(12.dp),
+                                        .padding(AppSpacing.medium),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     RadioButton(
                                         selected = isSelected,
-                                        onClick = { viewModel.setUpstreamDnsType(dnsOption) },
+                                        onClick = null,
                                         colors = RadioButtonDefaults.colors(
                                             selectedColor = MaterialTheme.colorScheme.primary,
                                             unselectedColor = MaterialTheme.colorScheme.onSurfaceVariant
@@ -393,7 +419,6 @@ fun PrivacyScreen(
                                             text = dnsOption.description,
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            fontSize = 11.sp
                                         )
                                     }
                                 }
@@ -402,22 +427,9 @@ fun PrivacyScreen(
                     }
 
                     if (prefs.upstreamDnsType == UpstreamDnsType.CUSTOM) {
-                        OutlinedTextField(
-                            value = prefs.customDnsIp,
-                            onValueChange = { viewModel.setCustomDnsIp(it) },
-                            label = { Text("Custom Resolver IPv4 Address") },
-                            placeholder = { Text("e.g. 192.168.1.100") },
-                            singleLine = true,
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .testTag("custom_dns_ip_field"),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
-                                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant
-                            )
+                        DnsAddressField(
+                            address = prefs.customDnsIp,
+                            onSave = viewModel::setCustomDnsIp
                         )
                     }
                 }
@@ -427,13 +439,13 @@ fun PrivacyScreen(
         // Technical Notice
         item {
             Card(
-                shape = RoundedCornerShape(14.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                shape = M3ShapesTokens.CornerMedium,
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
                 border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
             ) {
                 Row(
                     modifier = Modifier.padding(14.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(AppSpacing.medium),
                     verticalAlignment = Alignment.Top
                 ) {
                     Icon(
@@ -443,7 +455,7 @@ fun PrivacyScreen(
                         modifier = Modifier.size(20.dp)
                     )
                     Text(
-                        text = "Local DNS Sinkhole: NetGuardian intercepts UDP Port 53 queries on-device. Blocked domains are answered locally with 0.0.0.0 without forwarding queries to external servers.",
+                        text = stringResource(R.string.ui_local_dns_sinkhole_netguardian_intercepts_udp_port),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         lineHeight = 16.sp
@@ -464,9 +476,11 @@ fun CategoryCard(
     onToggle: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val haptic = LocalHapticFeedback.current
+
     Card(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        shape = M3ShapesTokens.CornerLargeIncreased,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
@@ -478,7 +492,7 @@ fun CategoryCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(AppSpacing.content),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Row(
@@ -487,13 +501,13 @@ fun CategoryCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(AppSpacing.medium),
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.weight(1f)
                 ) {
                     Surface(
-                        shape = RoundedCornerShape(10.dp),
-                        color = if (enabled) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+                        shape = opticalInnerShape(20.dp, 16.dp),
+                        color = if (enabled) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerLow,
                         modifier = Modifier.size(40.dp)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
@@ -506,7 +520,7 @@ fun CategoryCard(
                         }
                     }
                     Column(
-                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalArrangement = Arrangement.spacedBy(AppSpacing.tiny),
                         modifier = Modifier.weight(1f, fill = false)
                     ) {
                         Text(
@@ -517,14 +531,13 @@ fun CategoryCard(
                             overflow = TextOverflow.Ellipsis
                         )
                         Surface(
-                            shape = RoundedCornerShape(6.dp),
-                            color = if (enabled && domainCount > 0) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f) else MaterialTheme.colorScheme.surfaceVariant
+                            shape = M3ShapesTokens.CornerExtraSmall,
+                            color = if (enabled && domainCount > 0) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f) else MaterialTheme.colorScheme.surfaceContainerLow
                         ) {
                             Text(
                                 text = if (domainCount > 0) "$domainCount patterns" else "Active (built-in)",
                                 style = MaterialTheme.typography.labelSmall.copy(
                                     fontWeight = FontWeight.SemiBold,
-                                    fontSize = 11.sp
                                 ),
                                 color = if (enabled && domainCount > 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
@@ -535,12 +548,16 @@ fun CategoryCard(
                 Spacer(modifier = Modifier.width(8.dp))
                 Switch(
                     checked = enabled,
-                    onCheckedChange = onToggle,
+                    modifier = Modifier.semantics { contentDescription = title },
+                    onCheckedChange = {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        onToggle(it)
+                    },
                     colors = SwitchDefaults.colors(
                         checkedThumbColor = MaterialTheme.colorScheme.primary,
                         checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
                         uncheckedThumbColor = MaterialTheme.colorScheme.outline,
-                        uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant
+                        uncheckedTrackColor = MaterialTheme.colorScheme.surfaceContainerLow
                     )
                 )
             }
@@ -549,7 +566,6 @@ fun CategoryCard(
                 text = description,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                fontSize = 12.sp,
                 lineHeight = 16.sp
             )
         }
@@ -566,7 +582,7 @@ fun CustomDomainItem(
     val netGuardian = MaterialTheme.netGuardian
     Card(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
+        shape = M3ShapesTokens.CornerMedium,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
     ) {
@@ -592,18 +608,19 @@ fun CustomDomainItem(
             ) {
                 Switch(
                     checked = item.isEnabled,
+                    modifier = Modifier.semantics { contentDescription = item.domain },
                     onCheckedChange = onToggle,
                     colors = SwitchDefaults.colors(
                         checkedThumbColor = MaterialTheme.colorScheme.primary,
                         checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
                         uncheckedThumbColor = MaterialTheme.colorScheme.outline,
-                        uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant
+                        uncheckedTrackColor = MaterialTheme.colorScheme.surfaceContainerLow
                     )
                 )
                 IconButton(onClick = onDelete) {
                     Icon(
                         imageVector = Icons.Default.Delete,
-                        contentDescription = "Delete",
+                        contentDescription = stringResource(R.string.ui_delete),
                         tint = netGuardian.blocked,
                         modifier = Modifier.size(20.dp)
                     )

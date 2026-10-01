@@ -11,13 +11,40 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.junit.Before
+import org.junit.After
+import androidx.lifecycle.ViewModelStore
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.setMain
+import kotlinx.coroutines.test.resetMain
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
 class ExampleRobolectricTest {
+    private val viewModels = ViewModelStore()
+    private var viewModelIndex = 0
+
+    @Before fun controlMainDispatcher() {
+        Dispatchers.setMain(StandardTestDispatcher())
+    }
+
+    @After fun clearViewModels() {
+        viewModels.clear()
+        Dispatchers.resetMain()
+    }
+
+    private fun newViewModel(app: android.app.Application): com.example.ui.MainViewModel {
+        return com.example.ui.MainViewModel(app).also {
+            viewModels.put("test-${viewModelIndex++}", it)
+        }
+    }
+
 
     @Test
     fun `read string from context`() {
@@ -134,5 +161,55 @@ class ExampleRobolectricTest {
             dnsFilteringEnabled = true
         )
         assertFalse(decision.isAllowed)
+    }
+
+    @Test
+    fun `rootNavState initializes to MainApp when syncPrefs has onboarding completed`() {
+        val app = ApplicationProvider.getApplicationContext<android.app.Application>()
+        val syncPrefs = app.getSharedPreferences("netguardian_sync_prefs", Context.MODE_PRIVATE)
+        syncPrefs.edit().putBoolean("onboarding_completed", true).commit()
+
+        val viewModel = newViewModel(app)
+        assertEquals(com.example.ui.RootNavState.MainApp, viewModel.rootNavState.value)
+    }
+
+    @Test
+    fun `rootNavState initializes to Loading when syncPrefs has not completed onboarding`() {
+        val app = ApplicationProvider.getApplicationContext<android.app.Application>()
+        val syncPrefs = app.getSharedPreferences("netguardian_sync_prefs", Context.MODE_PRIVATE)
+        syncPrefs.edit().clear().commit()
+
+        val viewModel = newViewModel(app)
+        assertEquals(com.example.ui.RootNavState.Loading, viewModel.rootNavState.value)
+    }
+
+    @Test
+    fun `completeOnboarding immediately updates rootNavState to MainApp`() {
+        val app = ApplicationProvider.getApplicationContext<android.app.Application>()
+        val syncPrefs = app.getSharedPreferences("netguardian_sync_prefs", Context.MODE_PRIVATE)
+        syncPrefs.edit().clear().commit()
+
+        val viewModel = newViewModel(app)
+        assertEquals(com.example.ui.RootNavState.Loading, viewModel.rootNavState.value)
+
+        viewModel.completeOnboarding()
+        assertEquals(com.example.ui.RootNavState.MainApp, viewModel.rootNavState.value)
+    }
+
+    @Test
+    fun `when onboarding is completed in preferences, syncPrefs is preserved and next ViewModel starts in MainApp`() = kotlinx.coroutines.test.runTest {
+        val app = ApplicationProvider.getApplicationContext<android.app.Application>()
+        val syncPrefs = app.getSharedPreferences("netguardian_sync_prefs", Context.MODE_PRIVATE)
+        syncPrefs.edit().clear().commit()
+
+        val prefsRepo = com.example.data.PreferencesRepository(app)
+        prefsRepo.setOnboardingCompleted(true)
+
+        // After completing onboarding, syncPrefs is committed immediately
+        assertEquals(true, prefsRepo.isOnboardingCompletedSync())
+
+        // And any newly constructed ViewModel starts in MainApp with 0ms delay
+        val viewModel = newViewModel(app)
+        assertEquals(com.example.ui.RootNavState.MainApp, viewModel.rootNavState.value)
     }
 }

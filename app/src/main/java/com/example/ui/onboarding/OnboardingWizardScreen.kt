@@ -1,5 +1,8 @@
 package com.example.ui.onboarding
 
+import androidx.compose.ui.res.stringResource
+import com.example.R
+
 import android.Manifest
 import android.content.Context
 import android.content.Intent
@@ -25,6 +28,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -71,6 +75,9 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -78,6 +85,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -86,7 +94,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -112,14 +120,15 @@ fun OnboardingWizardScreen(
     val userPrefs by viewModel.userPreferences.collectAsStateWithLifecycle()
     val diagnostics by viewModel.systemDiagnostics.collectAsStateWithLifecycle()
 
-    var currentStep by remember { mutableIntStateOf(1) }
+    var currentStep by rememberSaveable { mutableIntStateOf(1) }
     val totalSteps = 10
+    BackHandler(enabled = currentStep > 1) { currentStep -= 1 }
 
     // Local check states re-evaluated when returning from system dialogs
     var isVpnGranted by remember { mutableStateOf(DiagnosticsHelper.isVpnAuthorized(context)) }
     var isNotificationGranted by remember { mutableStateOf(DiagnosticsHelper.isNotificationGranted(context)) }
     var isBatteryOptimized by remember { mutableStateOf(!DiagnosticsHelper.isBatteryOptimizationIgnored(context)) }
-    var vpnRequestedAttempted by remember { mutableStateOf(false) }
+    var vpnRequestedAttempted by rememberSaveable { mutableStateOf(false) }
 
     // Re-check permissions whenever app returns to foreground (resumes)
     DisposableEffect(lifecycleOwner) {
@@ -160,6 +169,7 @@ fun OnboardingWizardScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(MaterialTheme.colorScheme.background)
+                    .statusBarsPadding()
                     .padding(horizontal = 20.dp, vertical = 12.dp)
             ) {
                 Row(
@@ -170,11 +180,11 @@ fun OnboardingWizardScreen(
                     if (currentStep > 1) {
                         IconButton(
                             onClick = { currentStep -= 1 },
-                            modifier = Modifier.size(36.dp)
+                            modifier = Modifier.size(48.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Previous step",
+                                contentDescription = stringResource(R.string.ui_previous_step),
                                 tint = MaterialTheme.colorScheme.onBackground
                             )
                         }
@@ -184,7 +194,7 @@ fun OnboardingWizardScreen(
 
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
-                            text = "NetGuardian Setup",
+                            text = stringResource(R.string.ui_netguardian_setup),
                             style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
                             color = MaterialTheme.colorScheme.onBackground
                         )
@@ -206,7 +216,7 @@ fun OnboardingWizardScreen(
                                 }
                             }
                         ) {
-                            Text("Skip", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(stringResource(R.string.ui_skip), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     } else {
                         Spacer(modifier = Modifier.size(36.dp))
@@ -232,6 +242,7 @@ fun OnboardingWizardScreen(
                 .padding(paddingValues)
         ) {
             AnimatedContent(
+                modifier = Modifier.align(Alignment.TopCenter).widthIn(max = 840.dp).fillMaxWidth(),
                 targetState = currentStep,
                 transitionSpec = {
                     if (targetState > initialState) {
@@ -344,7 +355,7 @@ private fun Step1Welcome(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(24.dp),
+            .padding(AppSpacing.section),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.SpaceBetween
     ) {
@@ -372,7 +383,7 @@ private fun Step1Welcome(
             ) {
                 Icon(
                     imageVector = Icons.Default.Shield,
-                    contentDescription = "Shield Icon",
+                    contentDescription = stringResource(R.string.ui_shield_icon),
                     tint = MaterialTheme.colorScheme.onPrimary,
                     modifier = Modifier.size(60.dp)
                 )
@@ -384,7 +395,7 @@ private fun Step1Welcome(
             modifier = Modifier.padding(horizontal = 8.dp)
         ) {
             Text(
-                text = "Take control of your internet",
+                text = stringResource(R.string.ui_take_control_of_your_internet),
                 style = MaterialTheme.typography.headlineMedium.copy(
                     fontWeight = FontWeight.Bold,
                     letterSpacing = (-0.5).sp
@@ -394,7 +405,7 @@ private fun Step1Welcome(
             )
             Spacer(modifier = Modifier.height(14.dp))
             Text(
-                text = "Control which apps can access the internet, block unwanted connections, reduce background network activity, and improve your privacy.",
+                text = stringResource(R.string.ui_control_which_apps_can_access_the_internet),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
@@ -410,7 +421,7 @@ private fun Step1Welcome(
                 onClick = onGetStarted,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(52.dp)
+                    .heightIn(min = 52.dp)
                     .testTag("onboarding_get_started_button"),
                 shape = RoundedCornerShape(14.dp),
                 colors = ButtonDefaults.buttonColors(
@@ -418,7 +429,7 @@ private fun Step1Welcome(
                     contentColor = MaterialTheme.colorScheme.onPrimary
                 )
             ) {
-                Text("Get Started", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                Text(stringResource(R.string.ui_get_started), fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                 Spacer(modifier = Modifier.width(8.dp))
                 Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(18.dp))
             }
@@ -427,9 +438,9 @@ private fun Step1Welcome(
                 onClick = onLearnHowItWorks,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(48.dp)
+                    .heightIn(min = 48.dp)
             ) {
-                Text("Learn how it works", fontSize = 14.sp, color = MaterialTheme.colorScheme.primary)
+                Text(stringResource(R.string.ui_learn_how_it_works), fontSize = 14.sp, color = MaterialTheme.colorScheme.primary)
             }
         }
     }
@@ -445,17 +456,17 @@ private fun Step2ExplainApp(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(24.dp),
+            .padding(AppSpacing.section),
         verticalArrangement = Arrangement.SpaceBetween
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(AppSpacing.content)) {
             Text(
-                text = "How NetGuardian Works",
+                text = stringResource(R.string.ui_how_netguardian_works),
                 style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
                 color = MaterialTheme.colorScheme.onBackground
             )
             Text(
-                text = "Three core capabilities protect your device from unauthorized network access and silent tracking.",
+                text = stringResource(R.string.ui_three_core_capabilities_protect_your_device_from),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -486,7 +497,7 @@ private fun Step2ExplainApp(
             ) {
                 Row(
                     modifier = Modifier.padding(14.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(AppSpacing.medium),
                     verticalAlignment = Alignment.Top
                 ) {
                     Icon(
@@ -496,7 +507,7 @@ private fun Step2ExplainApp(
                         modifier = Modifier.size(20.dp)
                     )
                     Text(
-                        text = "This app uses Android's VPN functionality to filter network traffic locally. Your traffic is not sent through our servers.",
+                        text = stringResource(R.string.ui_this_app_uses_android_s_vpn_functionality),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onPrimaryContainer,
                         lineHeight = 18.sp
@@ -509,7 +520,7 @@ private fun Step2ExplainApp(
             onClick = onContinue,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(52.dp)
+                .heightIn(min = 52.dp)
                 .testTag("onboarding_step2_continue"),
             shape = RoundedCornerShape(14.dp),
             colors = ButtonDefaults.buttonColors(
@@ -517,7 +528,7 @@ private fun Step2ExplainApp(
                 contentColor = MaterialTheme.colorScheme.onPrimary
             )
         ) {
-            Text("Next: Privacy Promise", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+            Text(stringResource(R.string.ui_next_privacy_promise), fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
             Spacer(modifier = Modifier.width(8.dp))
             Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(18.dp))
         }
@@ -538,7 +549,7 @@ private fun CapabilityCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(AppSpacing.content),
             horizontalArrangement = Arrangement.spacedBy(14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -579,17 +590,17 @@ private fun Step3PrivacyPromise(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(24.dp),
+            .padding(AppSpacing.section),
         verticalArrangement = Arrangement.SpaceBetween
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Text(
-                text = "Your traffic stays on your device.",
+                text = stringResource(R.string.ui_your_traffic_stays_on_your_device),
                 style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
                 color = MaterialTheme.colorScheme.onBackground
             )
             Text(
-                text = "NetGuardian operates under a strict offline-first, zero-cloud architecture designed for absolute transparency.",
+                text = stringResource(R.string.ui_netguardian_operates_under_a_strict_offline_first),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -600,8 +611,8 @@ private fun Step3PrivacyPromise(
                 border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    modifier = Modifier.padding(AppSpacing.content),
+                    verticalArrangement = Arrangement.spacedBy(AppSpacing.medium)
                 ) {
                     PrivacyCheckItem("No account required")
                     PrivacyCheckItem("No telemetry or analytics")
@@ -614,7 +625,7 @@ private fun Step3PrivacyPromise(
 
             Card(
                 shape = RoundedCornerShape(14.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.5f)),
                 border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
             ) {
                 Row(
@@ -629,7 +640,7 @@ private fun Step3PrivacyPromise(
                         modifier = Modifier.size(20.dp)
                     )
                     Text(
-                        text = "Android requires a VPN permission because the firewall needs to inspect and control network traffic.",
+                        text = stringResource(R.string.ui_android_requires_a_vpn_permission_because_the),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurface,
                         lineHeight = 17.sp
@@ -642,7 +653,7 @@ private fun Step3PrivacyPromise(
             onClick = onContinue,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(52.dp)
+                .heightIn(min = 52.dp)
                 .testTag("onboarding_step3_continue"),
             shape = RoundedCornerShape(14.dp),
             colors = ButtonDefaults.buttonColors(
@@ -650,7 +661,7 @@ private fun Step3PrivacyPromise(
                 contentColor = MaterialTheme.colorScheme.onPrimary
             )
         ) {
-            Text("Continue", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+            Text(stringResource(R.string.ui_continue), fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
             Spacer(modifier = Modifier.width(8.dp))
             Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(18.dp))
         }
@@ -662,7 +673,7 @@ private fun PrivacyCheckItem(text: String) {
     val netGuardian = MaterialTheme.netGuardian
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
+        horizontalArrangement = Arrangement.spacedBy(AppSpacing.medium)
     ) {
         Surface(
             shape = CircleShape,
@@ -704,12 +715,12 @@ private fun Step4SetupChecklist(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(24.dp),
+            .padding(AppSpacing.section),
         verticalArrangement = Arrangement.SpaceBetween
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(AppSpacing.content)) {
             Text(
-                text = "Setup Checklist",
+                text = stringResource(R.string.ui_setup_checklist),
                 style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
                 color = MaterialTheme.colorScheme.onBackground
             )
@@ -719,7 +730,7 @@ private fun Step4SetupChecklist(
                 color = if (completedRequired == totalRequired) netGuardian.allowed else MaterialTheme.colorScheme.primary
             )
             Text(
-                text = "Before activating the firewall, we will guide you through granting the necessary Android system permissions.",
+                text = stringResource(R.string.ui_before_activating_the_firewall_we_will_guide),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -730,7 +741,7 @@ private fun Step4SetupChecklist(
                 border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp),
+                    modifier = Modifier.padding(AppSpacing.content),
                     verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
                     ChecklistRow(
@@ -772,7 +783,7 @@ private fun Step4SetupChecklist(
             onClick = onBeginSetup,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(52.dp)
+                .heightIn(min = 52.dp)
                 .testTag("onboarding_step4_start_setup"),
             shape = RoundedCornerShape(14.dp),
             colors = ButtonDefaults.buttonColors(
@@ -780,7 +791,7 @@ private fun Step4SetupChecklist(
                 contentColor = MaterialTheme.colorScheme.onPrimary
             )
         ) {
-            Text("Begin Setup", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+            Text(stringResource(R.string.ui_begin_setup), fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
             Spacer(modifier = Modifier.width(8.dp))
             Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(18.dp))
         }
@@ -804,7 +815,7 @@ private fun ChecklistRow(
         Column(modifier = Modifier.weight(1f)) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(AppSpacing.small)
             ) {
                 Text(
                     text = title,
@@ -813,12 +824,11 @@ private fun ChecklistRow(
                 )
                 Surface(
                     shape = RoundedCornerShape(6.dp),
-                    color = if (isRequired) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
+                    color = if (isRequired) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerLow
                 ) {
                     Text(
                         text = tag,
                         style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                        fontSize = 9.sp,
                         color = if (isRequired) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                     )
@@ -834,7 +844,7 @@ private fun ChecklistRow(
 
         Surface(
             shape = CircleShape,
-            color = if (isReady) netGuardian.allowedContainer else MaterialTheme.colorScheme.surfaceVariant,
+            color = if (isReady) netGuardian.allowedContainer else MaterialTheme.colorScheme.surfaceContainerLow,
             modifier = Modifier.size(26.dp)
         ) {
             Box(contentAlignment = Alignment.Center) {
@@ -863,17 +873,17 @@ private fun Step5VpnPermission(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(24.dp),
+            .padding(AppSpacing.section),
         verticalArrangement = Arrangement.SpaceBetween
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(AppSpacing.content)) {
             Text(
-                text = "Firewall Access",
+                text = stringResource(R.string.ui_firewall_access),
                 style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
                 color = MaterialTheme.colorScheme.onBackground
             )
             Text(
-                text = "Android requires your approval before NetGuardian can create its local VPN connection.",
+                text = stringResource(R.string.ui_android_requires_your_approval_before_netguardian_can),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 lineHeight = 20.sp
@@ -885,11 +895,11 @@ private fun Step5VpnPermission(
                 border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    modifier = Modifier.padding(AppSpacing.content),
+                    verticalArrangement = Arrangement.spacedBy(AppSpacing.medium)
                 ) {
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(AppSpacing.medium),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Surface(
@@ -903,12 +913,12 @@ private fun Step5VpnPermission(
                         }
                         Column {
                             Text(
-                                text = "Local Loopback VPN",
+                                text = stringResource(R.string.ui_local_loopback_vpn),
                                 style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
-                                text = "No external remote server required",
+                                text = stringResource(R.string.ui_no_external_remote_server_required),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -916,7 +926,7 @@ private fun Step5VpnPermission(
                     }
 
                     Text(
-                        text = "The VPN is used to filter traffic on this device. NetGuardian does not need a remote VPN server.",
+                        text = stringResource(R.string.ui_the_vpn_is_used_to_filter_traffic),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         lineHeight = 18.sp
@@ -935,18 +945,18 @@ private fun Step5VpnPermission(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(14.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(AppSpacing.medium),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(Icons.Default.CheckCircle, contentDescription = null, tint = netGuardian.allowed, modifier = Modifier.size(24.dp))
                         Column {
                             Text(
-                                text = "VPN access enabled",
+                                text = stringResource(R.string.ui_vpn_access_enabled),
                                 style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
                                 color = netGuardian.allowed
                             )
                             Text(
-                                text = "Android has authorized local traffic inspection.",
+                                text = stringResource(R.string.ui_android_has_authorized_local_traffic_inspection),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = netGuardian.onAllowedContainer
                             )
@@ -963,18 +973,18 @@ private fun Step5VpnPermission(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(14.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(AppSpacing.medium),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(Icons.Default.Warning, contentDescription = null, tint = netGuardian.blocked, modifier = Modifier.size(24.dp))
                         Column {
                             Text(
-                                text = "VPN access wasn't granted",
+                                text = stringResource(R.string.ui_vpn_access_wasn_t_granted),
                                 style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
                                 color = netGuardian.blocked
                             )
                             Text(
-                                text = "The firewall cannot filter connections without this permission.",
+                                text = stringResource(R.string.ui_the_firewall_cannot_filter_connections_without_this),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = netGuardian.onBlockedContainer
                             )
@@ -993,7 +1003,7 @@ private fun Step5VpnPermission(
                     onClick = onNext,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(52.dp)
+                        .heightIn(min = 52.dp)
                         .testTag("onboarding_vpn_next_button"),
                     shape = RoundedCornerShape(14.dp),
                     colors = ButtonDefaults.buttonColors(
@@ -1001,7 +1011,7 @@ private fun Step5VpnPermission(
                         contentColor = MaterialTheme.colorScheme.onPrimary
                     )
                 ) {
-                    Text("Next Step", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(R.string.ui_next_step), fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                     Spacer(modifier = Modifier.width(8.dp))
                     Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(18.dp))
                 }
@@ -1010,7 +1020,7 @@ private fun Step5VpnPermission(
                     onClick = onRequestPermission,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(52.dp)
+                        .heightIn(min = 52.dp)
                         .testTag("onboarding_allow_vpn_button"),
                     shape = RoundedCornerShape(14.dp),
                     colors = ButtonDefaults.buttonColors(
@@ -1028,10 +1038,10 @@ private fun Step5VpnPermission(
                         onClick = onContinueWithoutVpn,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(48.dp),
+                            .heightIn(min = 48.dp),
                         shape = RoundedCornerShape(14.dp)
                     ) {
-                        Text("Continue Without Firewall", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.ui_continue_without_firewall), fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
@@ -1055,17 +1065,17 @@ private fun Step6NotificationPermission(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(24.dp),
+            .padding(AppSpacing.section),
         verticalArrangement = Arrangement.SpaceBetween
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(AppSpacing.content)) {
             Text(
-                text = "Persistent Firewall Status",
+                text = stringResource(R.string.ui_persistent_firewall_status),
                 style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
                 color = MaterialTheme.colorScheme.onBackground
             )
             Text(
-                text = "Android requires notification permission so the firewall can maintain a visible foreground-service notification while protection is active.",
+                text = stringResource(R.string.ui_android_requires_notification_permission_so_the_firewall),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 lineHeight = 20.sp
@@ -1077,11 +1087,11 @@ private fun Step6NotificationPermission(
                 border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    modifier = Modifier.padding(AppSpacing.content),
+                    verticalArrangement = Arrangement.spacedBy(AppSpacing.medium)
                 ) {
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(AppSpacing.medium),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Surface(
@@ -1095,7 +1105,7 @@ private fun Step6NotificationPermission(
                         }
                         Column {
                             Text(
-                                text = "Foreground Service Alert",
+                                text = stringResource(R.string.ui_foreground_service_alert),
                                 style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
                                 color = MaterialTheme.colorScheme.onSurface
                             )
@@ -1108,7 +1118,7 @@ private fun Step6NotificationPermission(
                     }
 
                     Text(
-                        text = "The notification displays real-time connection counters and allows you to pause or disconnect the firewall directly from your shade.",
+                        text = stringResource(R.string.ui_the_notification_displays_real_time_connection_counters),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         lineHeight = 18.sp
@@ -1126,7 +1136,7 @@ private fun Step6NotificationPermission(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(14.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(AppSpacing.medium),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(Icons.Default.CheckCircle, contentDescription = null, tint = netGuardian.allowed, modifier = Modifier.size(24.dp))
@@ -1149,7 +1159,7 @@ private fun Step6NotificationPermission(
                     onClick = onNext,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(52.dp)
+                        .heightIn(min = 52.dp)
                         .testTag("onboarding_notif_next_button"),
                     shape = RoundedCornerShape(14.dp),
                     colors = ButtonDefaults.buttonColors(
@@ -1157,7 +1167,7 @@ private fun Step6NotificationPermission(
                         contentColor = MaterialTheme.colorScheme.onPrimary
                     )
                 ) {
-                    Text("Continue", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(R.string.ui_continue), fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                     Spacer(modifier = Modifier.width(8.dp))
                     Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(18.dp))
                 }
@@ -1166,7 +1176,7 @@ private fun Step6NotificationPermission(
                     onClick = onRequestPermission,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(52.dp)
+                        .heightIn(min = 52.dp)
                         .testTag("onboarding_enable_notif_button"),
                     shape = RoundedCornerShape(14.dp),
                     colors = ButtonDefaults.buttonColors(
@@ -1176,7 +1186,7 @@ private fun Step6NotificationPermission(
                 ) {
                     Icon(Icons.Default.Notifications, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Enable Notifications", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(R.string.ui_enable_notifications), fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                 }
 
                 Row(
@@ -1185,16 +1195,16 @@ private fun Step6NotificationPermission(
                 ) {
                     OutlinedButton(
                         onClick = onOpenSettings,
-                        modifier = Modifier.weight(1f).height(48.dp),
+                        modifier = Modifier.weight(1f).heightIn(min = 48.dp),
                         shape = RoundedCornerShape(12.dp)
                     ) {
-                        Text("App Settings", fontSize = 12.sp)
+                        Text(stringResource(R.string.ui_app_settings), fontSize = 12.sp)
                     }
                     TextButton(
                         onClick = onNext,
-                        modifier = Modifier.weight(1f).height(48.dp)
+                        modifier = Modifier.weight(1f).heightIn(min = 48.dp)
                     ) {
-                        Text("Skip for Now", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.ui_skip_for_now), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
@@ -1215,17 +1225,17 @@ private fun Step7BatteryOperation(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(24.dp),
+            .padding(AppSpacing.section),
         verticalArrangement = Arrangement.SpaceBetween
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(AppSpacing.content)) {
             Text(
-                text = "Keep protection running",
+                text = stringResource(R.string.ui_keep_protection_running),
                 style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
                 color = MaterialTheme.colorScheme.onBackground
             )
             Text(
-                text = "Some Android manufacturers aggressively stop background applications. This can interrupt firewall protection.",
+                text = stringResource(R.string.ui_some_android_manufacturers_aggressively_stop_background_applications),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 lineHeight = 20.sp
@@ -1237,8 +1247,8 @@ private fun Step7BatteryOperation(
                 border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    modifier = Modifier.padding(AppSpacing.content),
+                    verticalArrangement = Arrangement.spacedBy(AppSpacing.medium)
                 ) {
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -1249,22 +1259,21 @@ private fun Step7BatteryOperation(
                             color = netGuardian.allowedContainer
                         ) {
                             Text(
-                                text = "RECOMMENDED",
+                                text = stringResource(R.string.ui_recommended),
                                 style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                                fontSize = 9.sp,
                                 color = netGuardian.allowed,
                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                             )
                         }
                         Text(
-                            text = "Allow unrestricted battery usage",
+                            text = stringResource(R.string.ui_allow_unrestricted_battery_usage),
                             style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
                             color = MaterialTheme.colorScheme.onSurface
                         )
                     }
 
                     Text(
-                        text = "• Background Whitelist: Prevents OEM battery optimizers from abruptly killing the local VPN process when your screen turns off.\n• Note: This setting is optional and manufacturer dependent. Disabling optimization may vary slightly by device.",
+                        text = stringResource(R.string.ui_background_whitelist_prevents_oem_battery_optimizers_from),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         lineHeight = 18.sp
@@ -1282,12 +1291,12 @@ private fun Step7BatteryOperation(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(14.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(AppSpacing.medium),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(Icons.Default.CheckCircle, contentDescription = null, tint = netGuardian.allowed, modifier = Modifier.size(22.dp))
                         Text(
-                            text = "Unrestricted battery usage is active",
+                            text = stringResource(R.string.ui_unrestricted_battery_usage_is_active),
                             style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
                             color = netGuardian.allowed
                         )
@@ -1304,7 +1313,7 @@ private fun Step7BatteryOperation(
                 onClick = onOpenBatterySettings,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(52.dp)
+                    .heightIn(min = 52.dp)
                     .testTag("onboarding_battery_settings_button"),
                 shape = RoundedCornerShape(14.dp),
                 colors = ButtonDefaults.buttonColors(
@@ -1314,14 +1323,14 @@ private fun Step7BatteryOperation(
             ) {
                 Icon(Icons.Default.BatterySaver, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Open Battery Settings", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                Text(stringResource(R.string.ui_open_battery_settings), fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
             }
 
             TextButton(
                 onClick = onNext,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(48.dp)
+                    .heightIn(min = 48.dp)
             ) {
                 Text(if (isIgnoringOptimization) "Continue" else "Not Now", fontSize = 14.sp, color = MaterialTheme.colorScheme.primary)
             }
@@ -1347,17 +1356,17 @@ private fun Step8OptionalPrivacyFeatures(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(24.dp),
+            .padding(AppSpacing.section),
         verticalArrangement = Arrangement.SpaceBetween
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(AppSpacing.content)) {
             Text(
-                text = "Strengthen your privacy",
+                text = stringResource(R.string.ui_strengthen_your_privacy),
                 style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
                 color = MaterialTheme.colorScheme.onBackground
             )
             Text(
-                text = "These features are optional. The firewall itself does not require them.",
+                text = stringResource(R.string.ui_these_features_are_optional_the_firewall_itself),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -1368,7 +1377,7 @@ private fun Step8OptionalPrivacyFeatures(
                 border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp),
+                    modifier = Modifier.padding(AppSpacing.content),
                     verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
                     PrivacyFeatureToggle(
@@ -1406,7 +1415,7 @@ private fun Step8OptionalPrivacyFeatures(
             onClick = onNext,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(52.dp)
+                .heightIn(min = 52.dp)
                 .testTag("onboarding_step8_continue"),
             shape = RoundedCornerShape(14.dp),
             colors = ButtonDefaults.buttonColors(
@@ -1414,7 +1423,7 @@ private fun Step8OptionalPrivacyFeatures(
                 contentColor = MaterialTheme.colorScheme.onPrimary
             )
         ) {
-            Text("Continue to Diagnostics", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+            Text(stringResource(R.string.ui_continue_to_diagnostics), fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
             Spacer(modifier = Modifier.width(8.dp))
             Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(18.dp))
         }
@@ -1453,7 +1462,7 @@ private fun PrivacyFeatureToggle(
             colors = SwitchDefaults.colors(
                 checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
                 checkedTrackColor = MaterialTheme.colorScheme.primary,
-                uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant
+                uncheckedTrackColor = MaterialTheme.colorScheme.surfaceContainerLow
             )
         )
     }
@@ -1472,7 +1481,7 @@ private fun Step9SystemAccessCheck(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(24.dp),
+            .padding(AppSpacing.section),
         verticalArrangement = Arrangement.SpaceBetween
     ) {
         Column(
@@ -1486,23 +1495,23 @@ private fun Step9SystemAccessCheck(
             ) {
                 Column {
                     Text(
-                        text = "Checking your setup",
+                        text = stringResource(R.string.ui_checking_your_setup),
                         style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
                         color = MaterialTheme.colorScheme.onBackground
                     )
                     Text(
-                        text = "Real system diagnostics test",
+                        text = stringResource(R.string.ui_real_system_diagnostics_test),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 IconButton(onClick = onRefresh) {
-                    Icon(Icons.Default.Refresh, contentDescription = "Refresh checks", tint = MaterialTheme.colorScheme.primary)
+                    Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.ui_refresh_checks), tint = MaterialTheme.colorScheme.primary)
                 }
             }
 
             LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(AppSpacing.small),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 items(diagnostics.size) { index ->
@@ -1515,7 +1524,7 @@ private fun Step9SystemAccessCheck(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(12.dp),
+                                .padding(AppSpacing.medium),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -1538,13 +1547,13 @@ private fun Step9SystemAccessCheck(
                                 color = when (check.status) {
                                     DiagnosticStatus.READY -> netGuardian.allowedContainer
                                     DiagnosticStatus.NEEDS_ATTENTION -> netGuardian.warning.copy(alpha = 0.15f)
-                                    DiagnosticStatus.NOT_REQUIRED -> MaterialTheme.colorScheme.surfaceVariant
+                                    DiagnosticStatus.NOT_REQUIRED -> MaterialTheme.colorScheme.surfaceContainerLow
                                 }
                             ) {
                                 Row(
                                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                                     verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                    horizontalArrangement = Arrangement.spacedBy(AppSpacing.tiny)
                                 ) {
                                     Text(
                                         text = when (check.status) {
@@ -1574,7 +1583,7 @@ private fun Step9SystemAccessCheck(
             onClick = onNext,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(52.dp)
+                .heightIn(min = 52.dp)
                 .testTag("onboarding_step9_next"),
             shape = RoundedCornerShape(14.dp),
             colors = ButtonDefaults.buttonColors(
@@ -1582,7 +1591,7 @@ private fun Step9SystemAccessCheck(
                 contentColor = MaterialTheme.colorScheme.onPrimary
             )
         ) {
-            Text("Proceed to Final Step", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+            Text(stringResource(R.string.ui_proceed_to_final_step), fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
             Spacer(modifier = Modifier.width(8.dp))
             Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(18.dp))
         }
@@ -1598,18 +1607,18 @@ private fun Step10SetupComplete(
     onOpenFirewall: (selectedPolicy: String) -> Unit
 ) {
     val netGuardian = MaterialTheme.netGuardian
-    var selectedDefaultPolicy by remember { mutableStateOf("ALLOW_ALL") }
+    var selectedDefaultPolicy by rememberSaveable { mutableStateOf("ALLOW_ALL") }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(24.dp),
+            .padding(AppSpacing.section),
         verticalArrangement = Arrangement.SpaceBetween
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(AppSpacing.content)) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(AppSpacing.medium)
             ) {
                 Surface(
                     shape = CircleShape,
@@ -1622,12 +1631,12 @@ private fun Step10SetupComplete(
                 }
                 Column {
                     Text(
-                        text = "You're protected",
+                        text = stringResource(R.string.ui_you_re_protected),
                         style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
                         color = MaterialTheme.colorScheme.onBackground
                     )
                     Text(
-                        text = "Initial setup complete",
+                        text = stringResource(R.string.ui_initial_setup_complete),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -1641,7 +1650,7 @@ private fun Step10SetupComplete(
                 border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp),
+                    modifier = Modifier.padding(AppSpacing.content),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     SummaryCheckRow("Firewall", if (isVpnReady) "✓ Ready" else "! Needs VPN")
@@ -1658,16 +1667,16 @@ private fun Step10SetupComplete(
                 border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    modifier = Modifier.padding(AppSpacing.content),
+                    verticalArrangement = Arrangement.spacedBy(AppSpacing.small)
                 ) {
                     Text(
-                        text = "Default Firewall Policy:",
+                        text = stringResource(R.string.ui_default_firewall_policy),
                         style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = "Choose how apps connect until you customize individual rules.",
+                        text = stringResource(R.string.ui_choose_how_apps_connect_until_you_customize),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -1689,7 +1698,7 @@ private fun Step10SetupComplete(
             }
 
             Text(
-                text = "Note: The firewall will remain OFF until you explicitly tap the power button on the dashboard.",
+                text = stringResource(R.string.ui_note_the_firewall_will_remain_off_until),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 lineHeight = 16.sp
@@ -1700,7 +1709,7 @@ private fun Step10SetupComplete(
             onClick = { onOpenFirewall(selectedDefaultPolicy) },
             modifier = Modifier
                 .fillMaxWidth()
-                .height(52.dp)
+                .heightIn(min = 52.dp)
                 .testTag("onboarding_open_firewall_button"),
             shape = RoundedCornerShape(14.dp),
             colors = ButtonDefaults.buttonColors(
@@ -1708,7 +1717,7 @@ private fun Step10SetupComplete(
                 contentColor = MaterialTheme.colorScheme.onPrimary
             )
         ) {
-            Text("Open Firewall", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.ui_open_firewall), fontSize = 16.sp, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.width(8.dp))
             Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(18.dp))
         }
@@ -1745,7 +1754,7 @@ private fun PolicyRadioOption(
             .clickable { onSelect() }
             .padding(vertical = 4.dp),
         verticalAlignment = Alignment.Top,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(AppSpacing.small)
     ) {
         RadioButton(
             selected = selected,

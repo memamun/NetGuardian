@@ -1,5 +1,8 @@
 package com.example.ui.settings
 
+import com.example.ui.theme.AppSpacing
+import androidx.compose.ui.res.stringResource
+
 import android.content.pm.PackageManager
 import android.os.Build
 import android.widget.Toast
@@ -47,6 +50,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -64,6 +69,7 @@ fun QuickSettingsTilesSection(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val haptic = LocalHapticFeedback.current
     var showManualInstructions by remember { mutableStateOf(false) }
 
     val hasCellular = remember {
@@ -72,7 +78,7 @@ fun QuickSettingsTilesSection(
 
     Column(
         modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(AppSpacing.medium)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -80,7 +86,7 @@ fun QuickSettingsTilesSection(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "QUICK SETTINGS TILES",
+                text = stringResource(R.string.ui_quick_settings_tiles),
                 style = MaterialTheme.typography.labelMedium.copy(
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 0.8.sp
@@ -93,14 +99,13 @@ fun QuickSettingsTilesSection(
                 color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
             ) {
                 Text(
-                    text = "SYSTEM CONTROLS",
+                    text = stringResource(R.string.ui_system_controls),
                     style = MaterialTheme.typography.labelSmall.copy(
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 0.5.sp
                     ),
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
-                    fontSize = 10.sp
                 )
             }
         }
@@ -112,11 +117,11 @@ fun QuickSettingsTilesSection(
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
         ) {
             Column(
-                modifier = Modifier.padding(16.dp),
+                modifier = Modifier.padding(AppSpacing.content),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 Text(
-                    text = "Control NetGuardian directly from your Android notification pull-down shade without opening the app.",
+                    text = stringResource(R.string.ui_control_netguardian_directly_from_your_android_notification),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -209,14 +214,17 @@ fun QuickSettingsTilesSection(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { showManualInstructions = !showManualInstructions }
+                        .clickable {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            showManualInstructions = !showManualInstructions
+                        }
                         .padding(vertical = 6.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(AppSpacing.small)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Info,
@@ -225,7 +233,7 @@ fun QuickSettingsTilesSection(
                             modifier = Modifier.size(18.dp)
                         )
                         Text(
-                            text = "How to add tiles manually",
+                            text = stringResource(R.string.ui_how_to_add_tiles_manually),
                             style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
                             color = MaterialTheme.colorScheme.onSurface
                         )
@@ -247,16 +255,16 @@ fun QuickSettingsTilesSection(
                         modifier = Modifier
                             .fillMaxWidth()
                             .background(
-                                MaterialTheme.colorScheme.surfaceVariant,
+                                MaterialTheme.colorScheme.surfaceContainerLow,
                                 RoundedCornerShape(12.dp)
                             )
-                            .padding(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                            .padding(AppSpacing.medium),
+                        verticalArrangement = Arrangement.spacedBy(AppSpacing.small)
                     ) {
-                        StepGuideRow(step = "1", text = "Swipe down twice from the top of your screen to expand Quick Settings.")
-                        StepGuideRow(step = "2", text = "Tap the Edit or Pencil icon (✏️) in the Quick Settings menu.")
-                        StepGuideRow(step = "3", text = "Scroll down to locate the available NetGuardian tiles.")
-                        StepGuideRow(step = "4", text = "Drag and drop the tiles into your active quick settings layout.")
+                        StepGuideRow(step = "1", text = stringResource(R.string.ui_swipe_down_twice_from_the_top_of))
+                        StepGuideRow(step = "2", text = stringResource(R.string.ui_tap_the_edit_or_pencil_icon_in))
+                        StepGuideRow(step = "3", text = stringResource(R.string.ui_scroll_down_to_locate_the_available_netguardian))
+                        StepGuideRow(step = "4", text = stringResource(R.string.ui_drag_and_drop_the_tiles_into_your))
                     }
                 }
             }
@@ -274,20 +282,21 @@ private fun TilePreviewItem(
     onAddToShade: () -> Unit
 ) {
     val netGuardian = MaterialTheme.netGuardian
+    val haptic = LocalHapticFeedback.current
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(12.dp))
-            .padding(12.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+            .background(MaterialTheme.colorScheme.surfaceContainerLow, RoundedCornerShape(12.dp))
+            .padding(AppSpacing.medium),
+        horizontalArrangement = Arrangement.spacedBy(AppSpacing.medium),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
             modifier = Modifier
                 .size(40.dp)
                 .background(
-                    if (enabled) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+                    if (enabled) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerLow,
                     CircleShape
                 ),
             contentAlignment = Alignment.Center
@@ -312,31 +321,34 @@ private fun TilePreviewItem(
                 )
 
                 Surface(
-                    shape = RoundedCornerShape(4.dp),
-                    color = if (enabled) netGuardian.allowedContainer else MaterialTheme.colorScheme.surfaceVariant
+                    shape = CircleShape,
+                    color = if (enabled) netGuardian.allowedContainer else MaterialTheme.colorScheme.surfaceContainerLow
                 ) {
                     Text(
                         text = statusBadge,
-                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp, fontWeight = FontWeight.Bold),
+                        style = MaterialTheme.typography.labelSmall.copy( fontWeight = FontWeight.Bold),
                         color = if (enabled) netGuardian.onAllowedContainer else MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                     )
                 }
             }
 
             Text(
                 text = subtitle,
-                style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+                style = MaterialTheme.typography.bodySmall.copy(),
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
 
         if (TileHelper.isAddTilePromptSupported() && enabled) {
             OutlinedButton(
-                onClick = onAddToShade,
-                shape = RoundedCornerShape(8.dp),
+                onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onAddToShade()
+                },
+                shape = CircleShape,
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)),
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 4.dp),
                 colors = ButtonDefaults.outlinedButtonColors(
                     contentColor = MaterialTheme.colorScheme.primary
                 )
@@ -348,7 +360,7 @@ private fun TilePreviewItem(
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
-                    text = "Add",
+                    text = stringResource(R.string.ui_add),
                     style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold)
                 )
             }
@@ -360,7 +372,7 @@ private fun TilePreviewItem(
 private fun StepGuideRow(step: String, text: String) {
     Row(
         verticalAlignment = Alignment.Top,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(AppSpacing.small)
     ) {
         Box(
             modifier = Modifier
@@ -371,13 +383,13 @@ private fun StepGuideRow(step: String, text: String) {
             Text(
                 text = step,
                 color = MaterialTheme.colorScheme.onPrimary,
-                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold,)
             )
         }
 
         Text(
             text = text,
-            style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
+            style = MaterialTheme.typography.bodySmall.copy(),
             color = MaterialTheme.colorScheme.onSurface
         )
     }

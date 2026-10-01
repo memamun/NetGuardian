@@ -129,14 +129,18 @@ private val DarkColorScheme = darkColorScheme(
     onSurface = DarkTextPrimary,
     surfaceVariant = DarkSurfaceVariant,
     onSurfaceVariant = DarkTextMuted,
-    surfaceContainer = DarkSurfaceVariant,
-    surfaceContainerHigh = DarkSurfaceElevated,
-    outline = DarkBorder,
+    surfaceContainerLowest = DarkSurfaceContainerLowest,
+    surfaceContainerLow = DarkSurfaceContainerLow,
+    surfaceContainer = DarkSurfaceContainer,
+    surfaceContainerHigh = DarkSurfaceContainerHigh,
+    surfaceContainerHighest = DarkSurfaceContainerHighest,
+    outline = DarkControlOutline,
     outlineVariant = DarkDivider,
     error = DarkBlockedRed,
     onError = Color(0xFF4C0006),
     errorContainer = DarkBlockedContainer,
-    onErrorContainer = DarkOnBlockedContainer
+    onErrorContainer = DarkOnBlockedContainer,
+    scrim = M3Scrim
 )
 
 private val LightColorScheme = lightColorScheme(
@@ -158,14 +162,18 @@ private val LightColorScheme = lightColorScheme(
     onSurface = SleekBodyText,
     surfaceVariant = SleekSurfaceVariant,
     onSurfaceVariant = SleekMutedText,
-    surfaceContainer = SleekSurfaceVariant,
-    surfaceContainerHigh = SleekSurface,
-    outline = SleekBorder,
+    surfaceContainerLowest = LightSurfaceContainerLowest,
+    surfaceContainerLow = LightSurfaceContainerLow,
+    surfaceContainer = LightSurfaceContainer,
+    surfaceContainerHigh = LightSurfaceContainerHigh,
+    surfaceContainerHighest = LightSurfaceContainerHighest,
+    outline = LightControlOutline,
     outlineVariant = SleekDivider,
     error = SleekBlockedRed,
     onError = Color.White,
     errorContainer = SleekBlockedContainer,
-    onErrorContainer = SleekOnBlockedContainer
+    onErrorContainer = SleekOnBlockedContainer,
+    scrim = M3Scrim
 )
 
 @Composable
@@ -185,10 +193,16 @@ fun NetGuardianTheme(
 
     val netGuardianColors = if (darkTheme) DarkNetGuardianColors else LightNetGuardianColors
 
-    CompositionLocalProvider(LocalNetGuardianColors provides netGuardianColors) {
+    CompositionLocalProvider(
+        LocalNetGuardianColors provides netGuardianColors,
+        LocalEmphasizedTypography provides EmphasizedTypography(),
+        LocalM3Shapes provides M3ExpressiveShapes(),
+        LocalM3Motion provides M3ExpressiveMotion()
+    ) {
         MaterialTheme(
             colorScheme = colorScheme,
             typography = Typography,
+            shapes = NetGuardianShapes,
             content = content
         )
     }

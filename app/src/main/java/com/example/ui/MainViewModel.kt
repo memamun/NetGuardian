@@ -24,6 +24,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -45,11 +46,17 @@ enum class LogFilter {
     ALLOWED
 }
 
+sealed interface RootNavState {
+    data object Loading : RootNavState
+    data object Onboarding : RootNavState
+    data object MainApp : RootNavState
+}
+
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val db = AppDatabase.getDatabase(application)
     private val dao = db.firewallDao()
-    private val appRepo = AppRepository(application, dao)
+    private val appRepo = AppRepository(application)
     private val prefsRepo = PreferencesRepository(application)
     private val firewallManager = FirewallManager.getInstance(application)
     private val stateRepo = com.example.firewall.FirewallStateRepository.getInstance(application)
@@ -61,6 +68,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val isDeviceIdle: StateFlow<Boolean> = firewallManager.isDeviceIdle
     val activeQuickMode: StateFlow<QuickMode> = firewallManager.activeQuickMode
 
+    private val _rootNavState = MutableStateFlow<RootNavState>(
+        if (prefsRepo.isOnboardingCompletedSync()) {
+            RootNavState.MainApp
+        } else {
+            RootNavState.Loading
+        }
+    )
+    val rootNavState: StateFlow<RootNavState> = _rootNavState.asStateFlow()
+
     init {
         viewModelScope.launch(Dispatchers.IO) {
             try {
@@ -69,20 +85,38 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 }
             } catch (_: Exception) {}
         }
+        viewModelScope.launch {
+            prefsRepo.userPreferencesFlow.collect { prefs ->
+                if (_rootNavState.value != RootNavState.MainApp) {
+                    _rootNavState.value = if (prefs.onboardingCompleted) {
+                        RootNavState.MainApp
+                    } else {
+                        RootNavState.Onboarding
+                    }
+                }
+            }
+        }
     }
 
-    val userPreferences: StateFlow<UserPreferences> = prefsRepo.userPreferencesFlow.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000),
-        initialValue = UserPreferences()
-    )
+    val userPreferences: StateFlow<UserPreferences> = prefsRepo.userPreferencesFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.Eagerly,
+            initialValue = UserPreferences(
+                onboardingCompleted = prefsRepo.isOnboardingCompletedSync()
+            )
+        )
+
+    val isAppsLoading = MutableStateFlow(true)
 
     // Installed Apps
-    val installedApps: StateFlow<List<AppItem>> = appRepo.appsFlow.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000),
-        initialValue = emptyList()
-    )
+    val installedApps: StateFlow<List<AppItem>> = appRepo.appsFlow
+        .onEach { isAppsLoading.value = false }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
 
     val searchQuery = MutableStateFlow("")
     val selectedFilter = MutableStateFlow(AppFilter.ALL)
@@ -473,6 +507,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun completeOnboarding(policy: String = "ALLOW_ALL") {
+        _rootNavState.value = RootNavState.MainApp
         viewModelScope.launch(Dispatchers.IO) {
             prefsRepo.setOnboardingCompleted(true)
             prefsRepo.setDefaultRulePolicy(policy)
@@ -482,6 +517,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 appRepo.allowAllApps()
                 firewallManager.notifyRulesChanged()
             }
+        }
+    }
+
+    fun setOnboardingCompleted(completed: Boolean) {
+        if (completed) {
+            _rootNavState.value = RootNavState.MainApp
+        }
+        viewModelScope.launch(Dispatchers.IO) {
+            prefsRepo.setOnboardingCompleted(completed)
         }
     }
 

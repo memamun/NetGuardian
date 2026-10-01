@@ -134,11 +134,17 @@ class FirewallTileService : TileService() {
                             )
                         )
                     } else {
-                        @Suppress("DEPRECATION")
-                        startActivityAndCollapse(launchIntent)
+                        launchLegacySetup(launchIntent)
                     }
                 }
             }
         }
     }
+    // This fallback is called only below API 34, where the PendingIntent overload does not exist.
+    @android.annotation.SuppressLint("StartActivityAndCollapseDeprecated")
+    @Suppress("DEPRECATION")
+    private fun launchLegacySetup(intent: Intent) {
+        startActivityAndCollapse(intent)
+    }
+
 }

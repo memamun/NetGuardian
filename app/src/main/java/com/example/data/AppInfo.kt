@@ -1,7 +1,9 @@
 package com.example.data
 
+import androidx.compose.runtime.Immutable
 import com.example.database.AppRuleEntity
 
+@Immutable
 data class AppItem(
     val packageName: String,
     val appName: String,

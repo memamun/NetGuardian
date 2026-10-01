@@ -1,5 +1,8 @@
 package com.example.ui.home
 
+import androidx.compose.ui.res.stringResource
+import com.example.R
+
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -67,16 +70,16 @@ fun FirewallStartupSafetyDialog(
                     }
                 }
                 Text(
-                    text = "Start Firewall?",
+                    text = stringResource(R.string.ui_start_firewall),
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                     color = MaterialTheme.colorScheme.onSurface
                 )
             }
         },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(AppSpacing.medium)) {
                 Text(
-                    text = "Android will route network traffic through NetGuardian so blocked connections can be filtered.",
+                    text = stringResource(R.string.ui_android_will_route_network_traffic_through_netguardian),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface,
                     lineHeight = 20.sp
@@ -88,8 +91,8 @@ fun FirewallStartupSafetyDialog(
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f))
                 ) {
                     Row(
-                        modifier = Modifier.padding(12.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.padding(AppSpacing.medium),
+                        horizontalArrangement = Arrangement.spacedBy(AppSpacing.small),
                         verticalAlignment = Alignment.Top
                     ) {
                         Icon(
@@ -99,7 +102,7 @@ fun FirewallStartupSafetyDialog(
                             modifier = Modifier.size(18.dp)
                         )
                         Text(
-                            text = "Your network traffic is processed locally according to your firewall rules.",
+                            text = stringResource(R.string.ui_your_network_traffic_is_processed_locally_according),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onPrimaryContainer,
                             lineHeight = 17.sp
@@ -118,7 +121,7 @@ fun FirewallStartupSafetyDialog(
                 ),
                 modifier = Modifier.testTag("confirm_start_firewall_button")
             ) {
-                Text("Start Firewall", fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.ui_start_firewall_2), fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {
@@ -126,7 +129,7 @@ fun FirewallStartupSafetyDialog(
                 onClick = onDismiss,
                 shape = RoundedCornerShape(10.dp)
             ) {
-                Text("Cancel")
+                Text(stringResource(R.string.ui_cancel))
             }
         }
     )
@@ -161,7 +164,7 @@ fun FirewallStartupFailureDialog(
                     }
                 }
                 Text(
-                    text = "Firewall Startup Failed",
+                    text = stringResource(R.string.ui_firewall_startup_failed),
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                     color = netGuardian.blocked
                 )
@@ -170,13 +173,13 @@ fun FirewallStartupFailureDialog(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(
-                    text = "Could not activate the local firewall VPN interface.",
+                    text = stringResource(R.string.ui_could_not_activate_the_local_firewall_vpn),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Card(
                     shape = RoundedCornerShape(10.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
                 ) {
                     Text(
@@ -187,7 +190,7 @@ fun FirewallStartupFailureDialog(
                     )
                 }
                 Text(
-                    text = "Recovery steps:\n1. Check if another VPN application is currently active or in 'Always-on' lockdown.\n2. Disconnect any active third-party VPNs.\n3. Verify VPN permission in Android Settings.",
+                    text = stringResource(R.string.ui_recovery_steps_n1_check_if_another_vpn),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     lineHeight = 17.sp
@@ -203,12 +206,12 @@ fun FirewallStartupFailureDialog(
                     contentColor = MaterialTheme.colorScheme.onPrimary
                 )
             ) {
-                Text("Retry")
+                Text(stringResource(R.string.ui_retry))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Dismiss", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.ui_dismiss), color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     )

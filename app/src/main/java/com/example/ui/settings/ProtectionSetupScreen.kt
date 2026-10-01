@@ -1,5 +1,8 @@
 package com.example.ui.settings
 
+import androidx.compose.ui.res.stringResource
+import com.example.R
+
 import android.content.Context
 import android.os.Build
 import androidx.compose.foundation.BorderStroke
@@ -52,7 +55,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -72,6 +77,7 @@ fun ProtectionSetupSection(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val haptic = LocalHapticFeedback.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val firewallActive by viewModel.firewallActive.collectAsStateWithLifecycle()
     val diagnostics by viewModel.systemDiagnostics.collectAsStateWithLifecycle()
@@ -112,7 +118,7 @@ fun ProtectionSetupSection(
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier.padding(AppSpacing.content),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             Row(
@@ -127,25 +133,28 @@ fun ProtectionSetupSection(
                     Icon(Icons.Default.Security, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                     Column {
                         Text(
-                            text = "Protection Setup & Permissions",
+                            text = stringResource(R.string.ui_protection_setup_permissions),
                             style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = "Live Android security model verification",
+                            text = stringResource(R.string.ui_live_android_security_model_verification),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
                 FilledTonalButton(
-                    onClick = { refreshStates() },
-                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
-                    shape = RoundedCornerShape(8.dp)
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        refreshStates()
+                    },
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                    shape = CircleShape
                 ) {
                     Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(14.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("Check", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.ui_check), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 }
             }
 
@@ -220,6 +229,7 @@ private fun PermissionItemRow(
     onAction: (() -> Unit)?
 ) {
     val netGuardian = MaterialTheme.netGuardian
+    val haptic = LocalHapticFeedback.current
 
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -227,7 +237,7 @@ private fun PermissionItemRow(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Surface(
-            shape = RoundedCornerShape(10.dp),
+            shape = RoundedCornerShape(12.dp),
             color = if (isOk) MaterialTheme.colorScheme.primaryContainer else netGuardian.warningContainer,
             modifier = Modifier.size(36.dp)
         ) {
@@ -246,19 +256,24 @@ private fun PermissionItemRow(
         Column(modifier = Modifier.weight(1f)) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(AppSpacing.small)
             ) {
                 Text(
                     text = title,
                     style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
                     color = MaterialTheme.colorScheme.onSurface
                 )
-                Text(
-                    text = status,
-                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                    fontSize = 11.sp,
-                    color = if (isOk) netGuardian.allowed else netGuardian.warning
-                )
+                Surface(
+                    shape = CircleShape,
+                    color = if (isOk) netGuardian.allowedContainer else netGuardian.warningContainer
+                ) {
+                    Text(
+                        text = status,
+                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                        color = if (isOk) netGuardian.onAllowedContainer else netGuardian.onWarningContainer,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                    )
+                }
             }
             Spacer(modifier = Modifier.height(2.dp))
             Text(
@@ -272,9 +287,12 @@ private fun PermissionItemRow(
         if (actionLabel != null && onAction != null) {
             Spacer(modifier = Modifier.width(8.dp))
             FilledTonalButton(
-                onClick = onAction,
-                shape = RoundedCornerShape(8.dp),
-                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onAction()
+                },
+                shape = CircleShape,
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
                 colors = ButtonDefaults.filledTonalButtonColors(
                     containerColor = netGuardian.warningContainer,
                     contentColor = netGuardian.onWarningContainer

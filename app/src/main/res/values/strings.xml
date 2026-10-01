@@ -5,4 +5,215 @@
     <string name="quick_settings_tile_block_all">Block All</string>
     <string name="quick_settings_tile_wifi_only">Wi-Fi Only</string>
     <string name="quick_settings_tile_mobile_data">Mobile Data</string>
+    <string name="loading_protection">Loading protection settings…</string>
+    <string name="inspection_active">Protection active</string>
+    <string name="inspection_paused">Protection paused</string>
+    <string name="logs_no_matches">No matching connections. Try another search or filter.</string>
+    <string name="logs_empty_active">No connections recorded yet. New connection events will appear here.</string>
+    <string name="logs_empty_paused">No connections recorded. Start protection from Dashboard to see activity here.</string>
+    <string name="domain_label">Domain to block</string>
+    <string name="add_domain">Add domain rule</string>
+    <string name="import_rules_label">Rules JSON</string>
+    <string name="import_rules_error">Could not import these rules. Check that you pasted a complete NetGuardian export and try again.</string>
+    <string name="import_rules_working">Importing…</string>
+    <string name="import_rules_action">Import</string>
+    <string name="clear_search">Clear search</string>
+    <string name="search_apps">Search apps</string>
+    <string name="search_logs">Search domain, IP or app</string>
+    <string name="loading_apps">Loading apps</string>
+    <string name="loading_apps_description">Reading installed apps and their firewall rules.</string>
+    <string name="no_apps">No matching apps</string>
+    <string name="no_apps_description">Try a different name or clear your filters.</string>
+    <string name="clear_filters">Clear filters</string>
+    <string name="no_connections">No connections to show</string>
+    <string name="nav_dashboard">Dashboard</string>
+    <string name="nav_apps">Apps</string>
+    <string name="nav_logs">Connections</string>
+    <string name="nav_privacy">Privacy</string>
+    <string name="nav_settings">Settings</string>
+    <string name="protection_running">Protection is on</string>
+    <string name="protection_starting">Starting protection…</string>
+    <string name="protection_paused">Protection is paused</string>
+    <string name="protection_error">Protection needs attention</string>
+    <string name="protection_setup">VPN permission needed</string>
+    <string name="protection_stopped">Protection is off</string>
+    <string name="dns_address">Custom DNS IPv4 address</string>
+    <string name="dns_address_error">Enter four numbers from 0 to 255, separated by dots.</string>
+    <string name="dns_address_hint">For example, 192.168.1.100. Save to apply this resolver.</string>
+    <string name="save_dns">Save resolver</string>
+    <string name="ui_tap_any_app_to_customize_per_network" formatted="false">Tap any app to customize per-network rules (Wi-Fi, Mobile, Background, Trackers).</string>
+    <string name="ui_dismiss" formatted="false">Dismiss</string>
+    <string name="ui_options_and_filters" formatted="false">Options and Filters</string>
+    <string name="ui_filter_apps" formatted="false">FILTER APPS</string>
+    <string name="ui_selected" formatted="false">Selected</string>
+    <string name="ui_batch_actions" formatted="false">BATCH ACTIONS</string>
+    <string name="ui_block_user_apps" formatted="false">Block User Apps</string>
+    <string name="ui_allow_all_apps" formatted="false">Allow All Apps</string>
+    <string name="ui_block_all_background" formatted="false">Block All Background</string>
+    <string name="ui_allow_all_background" formatted="false">Allow All Background</string>
+    <string name="ui_view_mode" formatted="false">VIEW MODE</string>
+    <string name="ui_unified_app_list" formatted="false">Unified App List</string>
+    <string name="ui_standby_idle_policies" formatted="false">Standby &amp; Idle Policies</string>
+    <string name="ui_standby_view" formatted="false">Standby View</string>
+    <string name="ui_return_to_standard_view" formatted="false">Return to Standard View</string>
+    <string name="ui_clear_filter" formatted="false">Clear Filter</string>
+    <string name="ui_system" formatted="false">System</string>
+    <string name="ui_quick_controls" formatted="false">Quick Controls</string>
+    <string name="ui_network_access" formatted="false">Network Access</string>
+    <string name="ui_background_standby" formatted="false">Background &amp; Standby</string>
+    <string name="ui_privacy_shield" formatted="false">Privacy Shield</string>
+    <string name="ui_global_background_rules" formatted="false">Global Background Rules</string>
+    <string name="ui_apply_restrictions_to_all_non_system_user" formatted="false">Apply restrictions to all non-system user applications:</string>
+    <string name="ui_background" formatted="false">Background</string>
+    <string name="ui_screen_off" formatted="false">Screen-Off</string>
+    <string name="ui_idle_standby" formatted="false">Idle Standby</string>
+    <string name="ui_clear_logs" formatted="false">Clear Logs</string>
+    <string name="ui_clear_connection_logs" formatted="false">Clear Connection Logs</string>
+    <string name="ui_are_you_sure_you_want_to_delete" formatted="false">Are you sure you want to delete all recorded connection events?</string>
+    <string name="ui_clear_all" formatted="false">Clear All</string>
+    <string name="ui_cancel" formatted="false">Cancel</string>
+    <string name="ui_quick_settings_tiles_available" formatted="false">Quick Settings Tiles Available</string>
+    <string name="ui_control_firewall_block_all_and_wi_fi" formatted="false">Control Firewall, Block All, and Wi-Fi Only directly from your notification pull-down shade.</string>
+    <string name="ui_configure_tiles" formatted="false">Configure Tiles</string>
+    <string name="ui_instant_profiles_hardware_locks" formatted="false">Instant profiles &amp; hardware locks</string>
+    <string name="ui_quick_tiles" formatted="false">QUICK TILES</string>
+    <string name="ui_firewall_on_off" formatted="false">Firewall ON / OFF</string>
+    <string name="ui_network_profile_modes" formatted="false">NETWORK PROFILE MODES</string>
+    <string name="ui_control_modes_live_in_your_notification_drawer" formatted="false">Control modes live in your notification drawer actions and Android Quick Settings tile.</string>
+    <string name="ui_recent_activity" formatted="false">RECENT ACTIVITY</string>
+    <string name="ui_view_logs" formatted="false">View Logs</string>
+    <string name="ui_no_connection_events_logged_yet_nstart_firewall" formatted="false">No connection events logged yet.\nStart firewall to monitor traffic.</string>
+    <string name="ui_100_on_device_protection" formatted="false">100% On-Device Protection</string>
+    <string name="ui_netguardian_uses_android_s_local_vpnservice_loopback" formatted="false">NetGuardian uses Android\'s local VpnService loopback interface. Traffic is analyzed and filtered directly on your processor. Zero bytes are uploaded to remote servers.</string>
+    <string name="ui_start_firewall" formatted="false">Start Firewall?</string>
+    <string name="ui_android_will_route_network_traffic_through_netguardian" formatted="false">Android will route network traffic through NetGuardian so blocked connections can be filtered.</string>
+    <string name="ui_your_network_traffic_is_processed_locally_according" formatted="false">Your network traffic is processed locally according to your firewall rules.</string>
+    <string name="ui_start_firewall_2" formatted="false">Start Firewall</string>
+    <string name="ui_firewall_startup_failed" formatted="false">Firewall Startup Failed</string>
+    <string name="ui_could_not_activate_the_local_firewall_vpn" formatted="false">Could not activate the local firewall VPN interface.</string>
+    <string name="ui_recovery_steps_n1_check_if_another_vpn" formatted="false">Recovery steps:\n1. Check if another VPN application is currently active or in \'Always-on\' lockdown.\n2. Disconnect any active third-party VPNs.\n3. Verify VPN permission in Android Settings.</string>
+    <string name="ui_retry" formatted="false">Retry</string>
+    <string name="ui_previous_step" formatted="false">Previous step</string>
+    <string name="ui_netguardian_setup" formatted="false">NetGuardian Setup</string>
+    <string name="ui_skip" formatted="false">Skip</string>
+    <string name="ui_shield_icon" formatted="false">Shield Icon</string>
+    <string name="ui_take_control_of_your_internet" formatted="false">Take control of your internet</string>
+    <string name="ui_control_which_apps_can_access_the_internet" formatted="false">Control which apps can access the internet, block unwanted connections, reduce background network activity, and improve your privacy.</string>
+    <string name="ui_get_started" formatted="false">Get Started</string>
+    <string name="ui_learn_how_it_works" formatted="false">Learn how it works</string>
+    <string name="ui_how_netguardian_works" formatted="false">How NetGuardian Works</string>
+    <string name="ui_three_core_capabilities_protect_your_device_from" formatted="false">Three core capabilities protect your device from unauthorized network access and silent tracking.</string>
+    <string name="ui_this_app_uses_android_s_vpn_functionality" formatted="false">This app uses Android\'s VPN functionality to filter network traffic locally. Your traffic is not sent through our servers.</string>
+    <string name="ui_next_privacy_promise" formatted="false">Next: Privacy Promise</string>
+    <string name="ui_your_traffic_stays_on_your_device" formatted="false">Your traffic stays on your device.</string>
+    <string name="ui_netguardian_operates_under_a_strict_offline_first" formatted="false">NetGuardian operates under a strict offline-first, zero-cloud architecture designed for absolute transparency.</string>
+    <string name="ui_android_requires_a_vpn_permission_because_the" formatted="false">Android requires a VPN permission because the firewall needs to inspect and control network traffic.</string>
+    <string name="ui_continue" formatted="false">Continue</string>
+    <string name="ui_setup_checklist" formatted="false">Setup Checklist</string>
+    <string name="ui_before_activating_the_firewall_we_will_guide" formatted="false">Before activating the firewall, we will guide you through granting the necessary Android system permissions.</string>
+    <string name="ui_begin_setup" formatted="false">Begin Setup</string>
+    <string name="ui_firewall_access" formatted="false">Firewall Access</string>
+    <string name="ui_android_requires_your_approval_before_netguardian_can" formatted="false">Android requires your approval before NetGuardian can create its local VPN connection.</string>
+    <string name="ui_local_loopback_vpn" formatted="false">Local Loopback VPN</string>
+    <string name="ui_no_external_remote_server_required" formatted="false">No external remote server required</string>
+    <string name="ui_the_vpn_is_used_to_filter_traffic" formatted="false">The VPN is used to filter traffic on this device. NetGuardian does not need a remote VPN server.</string>
+    <string name="ui_vpn_access_enabled" formatted="false">VPN access enabled</string>
+    <string name="ui_android_has_authorized_local_traffic_inspection" formatted="false">Android has authorized local traffic inspection.</string>
+    <string name="ui_vpn_access_wasn_t_granted" formatted="false">VPN access wasn\'t granted</string>
+    <string name="ui_the_firewall_cannot_filter_connections_without_this" formatted="false">The firewall cannot filter connections without this permission.</string>
+    <string name="ui_next_step" formatted="false">Next Step</string>
+    <string name="ui_continue_without_firewall" formatted="false">Continue Without Firewall</string>
+    <string name="ui_persistent_firewall_status" formatted="false">Persistent Firewall Status</string>
+    <string name="ui_android_requires_notification_permission_so_the_firewall" formatted="false">Android requires notification permission so the firewall can maintain a visible foreground-service notification while protection is active.</string>
+    <string name="ui_foreground_service_alert" formatted="false">Foreground Service Alert</string>
+    <string name="ui_the_notification_displays_real_time_connection_counters" formatted="false">The notification displays real-time connection counters and allows you to pause or disconnect the firewall directly from your shade.</string>
+    <string name="ui_enable_notifications" formatted="false">Enable Notifications</string>
+    <string name="ui_app_settings" formatted="false">App Settings</string>
+    <string name="ui_skip_for_now" formatted="false">Skip for Now</string>
+    <string name="ui_keep_protection_running" formatted="false">Keep protection running</string>
+    <string name="ui_some_android_manufacturers_aggressively_stop_background_applications" formatted="false">Some Android manufacturers aggressively stop background applications. This can interrupt firewall protection.</string>
+    <string name="ui_recommended" formatted="false">RECOMMENDED</string>
+    <string name="ui_allow_unrestricted_battery_usage" formatted="false">Allow unrestricted battery usage</string>
+    <string name="ui_background_whitelist_prevents_oem_battery_optimizers_from" formatted="false">• Background Whitelist: Prevents OEM battery optimizers from abruptly killing the local VPN process when your screen turns off.\n• Note: This setting is optional and manufacturer dependent. Disabling optimization may vary slightly by device.</string>
+    <string name="ui_unrestricted_battery_usage_is_active" formatted="false">Unrestricted battery usage is active</string>
+    <string name="ui_open_battery_settings" formatted="false">Open Battery Settings</string>
+    <string name="ui_strengthen_your_privacy" formatted="false">Strengthen your privacy</string>
+    <string name="ui_these_features_are_optional_the_firewall_itself" formatted="false">These features are optional. The firewall itself does not require them.</string>
+    <string name="ui_continue_to_diagnostics" formatted="false">Continue to Diagnostics</string>
+    <string name="ui_checking_your_setup" formatted="false">Checking your setup</string>
+    <string name="ui_real_system_diagnostics_test" formatted="false">Real system diagnostics test</string>
+    <string name="ui_refresh_checks" formatted="false">Refresh checks</string>
+    <string name="ui_proceed_to_final_step" formatted="false">Proceed to Final Step</string>
+    <string name="ui_you_re_protected" formatted="false">You\'re protected</string>
+    <string name="ui_initial_setup_complete" formatted="false">Initial setup complete</string>
+    <string name="ui_default_firewall_policy" formatted="false">Default Firewall Policy:</string>
+    <string name="ui_choose_how_apps_connect_until_you_customize" formatted="false">Choose how apps connect until you customize individual rules.</string>
+    <string name="ui_note_the_firewall_will_remain_off_until" formatted="false">Note: The firewall will remain OFF until you explicitly tap the power button on the dashboard.</string>
+    <string name="ui_open_firewall" formatted="false">Open Firewall</string>
+    <string name="ui_dns_filtering" formatted="false">DNS Filtering</string>
+    <string name="ui_built_in_protection_rules" formatted="false">BUILT-IN PROTECTION RULES</string>
+    <string name="ui_custom_domain_blocklist" formatted="false">CUSTOM DOMAIN BLOCKLIST</string>
+    <string name="ui_add_custom_block_rule" formatted="false">Add Custom Block Rule</string>
+    <string name="ui_tracking_example_com" formatted="false">tracking.example.com</string>
+    <string name="ui_no_custom_block_rules_added_yet" formatted="false">No custom block rules added yet.</string>
+    <string name="ui_upstream_dns_resolver" formatted="false">UPSTREAM DNS RESOLVER</string>
+    <string name="ui_upstream_dns_resolver_2" formatted="false">Upstream DNS Resolver</string>
+    <string name="ui_choose_where_allowed_domain_queries_resolve_no" formatted="false">Choose where allowed domain queries resolve. No third-party tracking required.</string>
+    <string name="ui_local_dns_sinkhole_netguardian_intercepts_udp_port" formatted="false">Local DNS Sinkhole: NetGuardian intercepts UDP Port 53 queries on-device. Blocked domains are answered locally with 0.0.0.0 without forwarding queries to external servers.</string>
+    <string name="ui_delete" formatted="false">Delete</string>
+    <string name="ui_protection_setup_permissions" formatted="false">Protection Setup &amp; Permissions</string>
+    <string name="ui_live_android_security_model_verification" formatted="false">Live Android security model verification</string>
+    <string name="ui_check" formatted="false">Check</string>
+    <string name="ui_quick_settings_tiles" formatted="false">QUICK SETTINGS TILES</string>
+    <string name="ui_system_controls" formatted="false">SYSTEM CONTROLS</string>
+    <string name="ui_control_netguardian_directly_from_your_android_notification" formatted="false">Control NetGuardian directly from your Android notification pull-down shade without opening the app.</string>
+    <string name="ui_how_to_add_tiles_manually" formatted="false">How to add tiles manually</string>
+    <string name="ui_swipe_down_twice_from_the_top_of" formatted="false">Swipe down twice from the top of your screen to expand Quick Settings.</string>
+    <string name="ui_tap_the_edit_or_pencil_icon_in" formatted="false">Tap the Edit or Pencil icon (✏️) in the Quick Settings menu.</string>
+    <string name="ui_scroll_down_to_locate_the_available_netguardian" formatted="false">Scroll down to locate the available NetGuardian tiles.</string>
+    <string name="ui_drag_and_drop_the_tiles_into_your" formatted="false">Drag and drop the tiles into your active quick settings layout.</string>
+    <string name="ui_add" formatted="false">Add</string>
+    <string name="ui_firewall_configuration" formatted="false">FIREWALL CONFIGURATION</string>
+    <string name="ui_battery_data_transparency" formatted="false">BATTERY &amp; DATA TRANSPARENCY</string>
+    <string name="ui_zero_overhead_architecture" formatted="false">Zero Overhead Architecture</string>
+    <string name="ui_netguardian_inspects_packet_headers_purely_inside_the" formatted="false">NetGuardian uses a local VPN to apply your firewall rules. Battery use varies with network traffic and device settings.</string>
+    <string name="ui_most_blocked_applications" formatted="false">Most Blocked Applications:</string>
+    <string name="ui_system_architecture_insights" formatted="false">SYSTEM ARCHITECTURE INSIGHTS</string>
+    <string name="ui_how_android_background_controls_work" formatted="false">How Android Background Controls Work</string>
+    <string name="ui_1_cutting_network_vs_killing_processes_nandroid" formatted="false">Network rules control connections, not whether an app can run. An app may continue background work even when its network access is blocked.\n\nAndroid also limits background work through Doze and app standby. Device-specific battery settings can interrupt the firewall. If protection stops unexpectedly, review NetGuardian in your battery settings.</string>
+    <string name="ui_open_battery_optimization_whitelist" formatted="false">Battery settings</string>
+    <string name="ui_backup_migration" formatted="false">BACKUP &amp; MIGRATION</string>
+    <string name="ui_export_rules" formatted="false">Export Rules</string>
+    <string name="ui_import_rules" formatted="false">Import Rules</string>
+    <string name="ui_reset_rules_to_default" formatted="false">Reset Rules to Default</string>
+    <string name="ui_clears_all_custom_per_app_firewall_rules" formatted="false">Clears all custom per-app firewall rules</string>
+    <string name="ui_netguardian_v1_0_0_no_cloud_zero" formatted="false">NetGuardian v1.0.0 • No Cloud • Zero Telemetry • 100% Offline Local Protection</string>
+    <string name="ui_export_firewall_rules" formatted="false">Export Firewall Rules</string>
+    <string name="ui_copy_your_configuration_json_to_back_up" formatted="false">Copy your configuration JSON to back up or transfer rules:</string>
+    <string name="ui_copy_to_clipboard" formatted="false">Copy to Clipboard</string>
+    <string name="ui_close" formatted="false">Close</string>
+    <string name="ui_import_firewall_rules" formatted="false">Import Firewall Rules</string>
+    <string name="ui_paste_your_exported_rules_json_below" formatted="false">Paste your exported rules JSON below:</string>
+    <string name="ui_n_rules_n" formatted="false">{\n  \"rules\": [...] \n}</string>
+    <string name="ui_reset_firewall_rules" formatted="false">Reset Firewall Rules</string>
+    <string name="ui_are_you_sure_you_want_to_reset" formatted="false">Are you sure you want to reset all per-app rules and custom blocklists to default settings?</string>
+    <string name="ui_reset_all" formatted="false">Reset All</string>
+    <string name="nav_logs_short">Logs</string>
+    <string name="hero_running_detail">Applying local protection to %1$d apps.</string>
+    <string name="hero_starting_detail">Connecting the local VPN…</string>
+    <string name="hero_paused_detail">Resume to apply your app and DNS rules.</string>
+    <string name="hero_error_detail">Check VPN permission, then try starting again.</string>
+    <string name="hero_permission_detail">Allow the local VPN to start protection.</string>
+    <string name="hero_stopped_detail">Start to apply your app and DNS rules.</string>
+    <string name="hero_start">Start firewall</string>
+    <string name="hero_stop">Stop firewall</string>
+    <string name="hero_resume">Resume protection</string>
+    <string name="tiles_short_title">Quick Settings shortcuts</string>
+    <string name="tiles_short_detail">Control protection from the notification shade.</string>
+    <string name="trackers_allowed">Trackers allowed</string>
+    <string name="background_blocked">Background blocked</string>
+    <string name="screen_off_blocked">Screen-off blocked</string>
+    <string name="idle_blocked">Idle blocked</string>
+    <string name="show_details">Show</string>
+    <string name="hide_details">Hide</string>
 </resources>
