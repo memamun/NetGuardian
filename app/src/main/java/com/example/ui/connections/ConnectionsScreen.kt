@@ -1,13 +1,9 @@
 package com.example.ui.connections
 
-
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.ui.res.stringResource
-import com.example.ui.components.AppSearchField
-import com.example.ui.components.ScreenState
-import com.example.R
+import android.widget.Toast
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,54 +18,68 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.R
 import com.example.database.ConnectionLogEntity
 import com.example.ui.LogFilter
 import com.example.ui.MainViewModel
+import com.example.ui.components.AppSearchField
+import com.example.ui.components.ScreenState
 import com.example.ui.theme.*
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ConnectionsScreen(
     viewModel: MainViewModel,
@@ -84,6 +94,8 @@ fun ConnectionsScreen(
     val haptic = LocalHapticFeedback.current
     val focusManager = LocalFocusManager.current
     var showClearDialog by remember { mutableStateOf(false) }
+    var selectedLogForDetail by remember { mutableStateOf<ConnectionLogEntity?>(null) }
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     val blockedCount = remember(allLogs) { allLogs.count { it.isBlocked } }
     val blockRate = remember(allLogs, blockedCount) {
@@ -117,7 +129,7 @@ fun ConnectionsScreen(
                 modifier = Modifier.weight(1f).horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(AppSpacing.small)
             ) {
-                LogFilter.values().forEach { filter ->
+                LogFilter.entries.forEach { filter ->
                     val (label, count) = when (filter) {
                         LogFilter.ALL -> "All" to allLogs.size
                         LogFilter.BLOCKED -> "Blocked" to blockedCount
@@ -264,7 +276,13 @@ fun ConnectionsScreen(
                 verticalArrangement = Arrangement.spacedBy(AppSpacing.small)
             ) {
                 items(logs, key = { it.id }) { log ->
-                    ConnectionLogItemCard(log = log)
+                    ConnectionLogItemCard(
+                        log = log,
+                        onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            selectedLogForDetail = log
+                        }
+                    )
                 }
             }
         }
@@ -294,17 +312,37 @@ fun ConnectionsScreen(
             }
         )
     }
+
+    // Detail Bottom Sheet
+    selectedLogForDetail?.let { log ->
+        ModalBottomSheet(
+            onDismissRequest = { selectedLogForDetail = null },
+            sheetState = sheetState,
+            shape = M3ShapesTokens.CornerExtraLargeTop,
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+        ) {
+            ConnectionDetailSheetContent(
+                log = log,
+                onDismiss = { selectedLogForDetail = null },
+                onBlockDomain = { domain ->
+                    viewModel.addCustomBlocklistDomain(domain)
+                }
+            )
+        }
+    }
 }
 
 @Composable
 fun ConnectionLogItemCard(
     log: ConnectionLogEntity,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit = {}
 ) {
     val timeFormat = remember { SimpleDateFormat("hh:mm:ss a", Locale.getDefault()) }
     val netGuardian = MaterialTheme.netGuardian
 
     Card(
+        onClick = onClick,
         modifier = modifier
             .fillMaxWidth()
             .testTag("connection_log_card_${log.id}"),
@@ -358,7 +396,10 @@ fun ConnectionLogItemCard(
             ) {
                 Text(
                     text = log.destinationHost,
-                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontWeight = FontWeight.SemiBold,
+                        fontFamily = FontFamily.Monospace
+                    ),
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Surface(
@@ -390,6 +431,239 @@ fun ConnectionLogItemCard(
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+            }
+        }
+    }
+}
+
+@Composable
+fun ConnectionDetailSheetContent(
+    log: ConnectionLogEntity,
+    onDismiss: () -> Unit,
+    onBlockDomain: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val clipboardManager = LocalClipboardManager.current
+    val netGuardian = MaterialTheme.netGuardian
+    val fullTimeFormat = remember { SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()) }
+
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 20.dp, vertical = 8.dp)
+            .testTag("connection_detail_sheet"),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        // Sheet Header
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = stringResource(R.string.connection_details),
+                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            IconButton(onClick = onDismiss) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = stringResource(R.string.ui_cancel),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+
+        // App & Status Card
+        Card(
+            shape = M3ShapesTokens.CornerLargeIncreased,
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = log.appName,
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = log.packageName,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Surface(
+                    shape = M3ShapesTokens.CornerSmall,
+                    color = if (log.isBlocked) netGuardian.blockedContainer else netGuardian.allowedContainer,
+                    border = androidx.compose.foundation.BorderStroke(
+                        1.dp,
+                        if (log.isBlocked) netGuardian.blocked.copy(alpha = 0.3f) else netGuardian.allowed.copy(alpha = 0.3f)
+                    )
+                ) {
+                    Text(
+                        text = if (log.isBlocked) "BLOCKED" else "ALLOWED",
+                        color = if (log.isBlocked) netGuardian.onBlockedContainer else netGuardian.onAllowedContainer,
+                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                    )
+                }
+            }
+        }
+
+        // Detailed Metadata Card
+        Card(
+            shape = M3ShapesTokens.CornerLargeIncreased,
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // Host / IP
+                DetailRow(
+                    label = "Host / Destination",
+                    value = log.destinationHost,
+                    isMonospace = true,
+                    actionIcon = Icons.Default.ContentCopy,
+                    onAction = {
+                        clipboardManager.setText(AnnotatedString(log.destinationHost))
+                        Toast.makeText(context, context.getString(R.string.host_copied), Toast.LENGTH_SHORT).show()
+                    }
+                )
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+
+                // Protocol & Port
+                DetailRow(
+                    label = stringResource(R.string.protocol_port),
+                    value = "${log.protocol} : ${log.port}"
+                )
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+
+                // Decision & Reason
+                DetailRow(
+                    label = stringResource(R.string.filter_decision),
+                    value = log.blockReason,
+                    valueColor = if (log.isBlocked) netGuardian.blocked else netGuardian.allowed
+                )
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+
+                // Timestamp
+                DetailRow(
+                    label = stringResource(R.string.event_timestamp),
+                    value = fullTimeFormat.format(Date(log.timestamp))
+                )
+
+                if (log.bytesTransferred > 0) {
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                    DetailRow(
+                        label = stringResource(R.string.data_transferred),
+                        value = android.text.format.Formatter.formatFileSize(context, log.bytesTransferred)
+                    )
+                }
+            }
+        }
+
+        // Action Buttons Row
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            OutlinedButton(
+                onClick = {
+                    clipboardManager.setText(AnnotatedString(log.packageName))
+                    Toast.makeText(context, context.getString(R.string.package_copied), Toast.LENGTH_SHORT).show()
+                },
+                shape = M3ShapesTokens.CornerMedium,
+                modifier = Modifier.weight(1f)
+            ) {
+                Icon(Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(16.dp))
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(stringResource(R.string.copy_package), fontSize = 12.sp)
+            }
+
+            if (!log.isBlocked && log.destinationHost.isNotBlank()) {
+                Button(
+                    onClick = {
+                        onBlockDomain(log.destinationHost)
+                        Toast.makeText(context, context.getString(R.string.domain_blocked_notice), Toast.LENGTH_SHORT).show()
+                        onDismiss()
+                    },
+                    shape = M3ShapesTokens.CornerMedium,
+                    colors = ButtonDefaults.buttonColors(containerColor = netGuardian.blocked),
+                    modifier = Modifier
+                        .testTag("block_domain_button")
+                        .weight(1f)
+                ) {
+                    Icon(Icons.Default.Block, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(stringResource(R.string.block_domain_action), fontSize = 12.sp)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DetailRow(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier,
+    isMonospace: Boolean = false,
+    valueColor: Color = MaterialTheme.colorScheme.onSurface,
+    actionIcon: androidx.compose.ui.graphics.vector.ImageVector? = null,
+    onAction: (() -> Unit)? = null
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Text(
+                text = value,
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    fontWeight = FontWeight.SemiBold,
+                    fontFamily = if (isMonospace) FontFamily.Monospace else FontFamily.Default
+                ),
+                color = valueColor
+            )
+            if (actionIcon != null && onAction != null) {
+                IconButton(
+                    onClick = onAction,
+                    modifier = Modifier.size(28.dp)
+                ) {
+                    Icon(
+                        imageVector = actionIcon,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
             }
         }
     }

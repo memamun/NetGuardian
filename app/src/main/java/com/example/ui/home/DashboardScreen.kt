@@ -196,13 +196,41 @@ fun DashboardScreen(
         }
 
         item {
-            androidx.compose.material3.ListItem(
-                headlineContent = { Text(stringResource(R.string.tiles_short_title)) },
-                supportingContent = { Text(stringResource(R.string.tiles_short_detail)) },
-                trailingContent = { Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null) },
-                modifier = Modifier.clickable(enabled = onNavigateToSettings != null) { onNavigateToSettings?.invoke() },
-                colors = androidx.compose.material3.ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surface)
-            )
+            Card(
+                shape = M3ShapesTokens.CornerLargeIncreased,
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f)),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(M3ShapesTokens.CornerLargeIncreased)
+                    .clickable(enabled = onNavigateToSettings != null) { onNavigateToSettings?.invoke() }
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = stringResource(R.string.tiles_short_title),
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = stringResource(R.string.tiles_short_detail),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
         }
 
         // 4. Live Connection Activity Feed Preview
@@ -283,35 +311,69 @@ fun HeroStatusCard(
         com.example.firewall.FirewallState.VPN_PERMISSION_REQUIRED -> stringResource(R.string.hero_permission_detail)
         com.example.firewall.FirewallState.STOPPED -> stringResource(R.string.hero_stopped_detail)
     }
+    val emblemScale by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = if (active) 1.08f else 1.0f,
+        animationSpec = M3Motion.spatialDefault(),
+        label = "heroEmblemScale"
+    )
     val haptic = LocalHapticFeedback.current
+
     Card(
         modifier = modifier.fillMaxWidth().testTag("hero_status_card"),
-        shape = MaterialTheme.shapes.large,
+        shape = M3ShapesTokens.CornerExtraLarge,
         colors = CardDefaults.cardColors(containerColor = container, contentColor = foreground)
     ) {
         Column(Modifier.padding(AppSpacing.content), verticalArrangement = Arrangement.spacedBy(AppSpacing.content)) {
             Row(horizontalArrangement = Arrangement.spacedBy(AppSpacing.medium), verticalAlignment = Alignment.Top) {
-                // My design decision (not in M3): compact status emblem alongside the message.
-                Surface(shape = CircleShape, color = foreground.copy(alpha = 0.08f), modifier = Modifier.size(48.dp)) {
+                // My design decision (not in M3): compact status emblem with spatial spring scaling
+                Surface(
+                    shape = CircleShape,
+                    color = foreground.copy(alpha = 0.08f),
+                    modifier = Modifier.size(48.dp).scale(emblemScale)
+                ) {
                     Box(contentAlignment = Alignment.Center) {
-                        Icon(if (paused || error) Icons.Default.Block else Icons.Default.Shield,
-                            contentDescription = null, tint = foreground, modifier = Modifier.size(24.dp))
+                        Icon(
+                            imageVector = if (paused || error) Icons.Default.Block else Icons.Default.Shield,
+                            contentDescription = null,
+                            tint = foreground,
+                            modifier = Modifier.size(24.dp)
+                        )
                     }
                 }
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(AppSpacing.tiny)) {
-                    Text(title, style = MaterialTheme.typography.titleLarge)
+                    Text(title, style = MaterialTheme.emphasizedTypography.titleLarge)
                     Text(description, style = MaterialTheme.typography.bodyMedium)
                 }
             }
             Button(
                 onClick = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); onToggle() },
-                modifier = Modifier.fillMaxWidth().testTag("firewall_toggle_button")
+                modifier = Modifier.fillMaxWidth().testTag("firewall_toggle_button"),
+                shape = M3ShapesTokens.CornerMedium,
+                colors = if (active) {
+                    ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError
+                    )
+                } else if (paused) {
+                    ButtonDefaults.buttonColors(
+                        containerColor = colors.warning,
+                        contentColor = colors.onWarning
+                    )
+                } else {
+                    ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    )
+                }
             ) {
-                Text(stringResource(when {
-                    paused -> R.string.hero_resume
-                    active -> R.string.hero_stop
-                    else -> R.string.hero_start
-                }))
+                Text(
+                    text = stringResource(when {
+                        paused -> R.string.hero_resume
+                        active -> R.string.hero_stop
+                        else -> R.string.hero_start
+                    }),
+                    style = MaterialTheme.emphasizedTypography.labelLarge
+                )
             }
         }
     }

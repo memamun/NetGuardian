@@ -113,7 +113,7 @@ fun ProtectionSetupSection(
         modifier = modifier
             .fillMaxWidth()
             .testTag("protection_setup_card"),
-        shape = RoundedCornerShape(16.dp),
+        shape = M3ShapesTokens.CornerLargeIncreased,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
     ) {

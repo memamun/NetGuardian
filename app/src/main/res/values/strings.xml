@@ -226,4 +226,17 @@
     <string name="dns_status_starting">Starting…</string>
     <string name="dns_engine_notice">DNS filtering currently applies to blocked apps only. Allowed apps bypass the VPN and their DNS is not inspected. A future engine update will extend filtering to all apps.</string>
     <string name="dns_resolver_notice">The selected upstream DNS resolver is actively used to forward and resolve all allowed domain queries while blocked domains are sinkholed to 0.0.0.0.</string>
+
+    <!-- Connection Inspection -->
+    <string name="connection_details">Connection Details</string>
+    <string name="copy_host">Copy Host</string>
+    <string name="copy_package">Copy Package</string>
+    <string name="host_copied">Host copied to clipboard</string>
+    <string name="package_copied">Package copied to clipboard</string>
+    <string name="block_domain_action">Block Domain</string>
+    <string name="domain_blocked_notice">Domain added to custom blocklist</string>
+    <string name="protocol_port">Protocol &amp; Port</string>
+    <string name="data_transferred">Data Transferred</string>
+    <string name="event_timestamp">Timestamp</string>
+    <string name="filter_decision">Decision</string>
 </resources>

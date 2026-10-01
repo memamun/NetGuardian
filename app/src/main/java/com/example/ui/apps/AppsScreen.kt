@@ -705,26 +705,31 @@ private fun AppActionToggle(
     modifier: Modifier = Modifier
 ) {
     val haptic = LocalHapticFeedback.current
-    Surface(
-        onClick = {
-            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-            onClick()
-        },
-        shape = CircleShape,
-        color = if (isBlocked) blockedContainerColor else allowedContainerColor,
-        border = BorderStroke(
-            1.dp,
-            if (isBlocked) blockedContentColor.copy(alpha = 0.5f) else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
-        ),
-        modifier = modifier.size(38.dp)
+    Box(
+        modifier = modifier.size(48.dp),
+        contentAlignment = Alignment.Center
     ) {
-        Box(contentAlignment = Alignment.Center) {
-            Icon(
-                imageVector = icon,
-                contentDescription = contentDescription,
-                tint = if (isBlocked) blockedContentColor else allowedContentColor,
-                modifier = Modifier.size(18.dp)
-            )
+        Surface(
+            onClick = {
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                onClick()
+            },
+            shape = CircleShape,
+            color = if (isBlocked) blockedContainerColor else allowedContainerColor,
+            border = BorderStroke(
+                1.dp,
+                if (isBlocked) blockedContentColor.copy(alpha = 0.5f) else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+            ),
+            modifier = Modifier.size(38.dp)
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = contentDescription,
+                    tint = if (isBlocked) blockedContentColor else allowedContentColor,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
         }
     }
 }

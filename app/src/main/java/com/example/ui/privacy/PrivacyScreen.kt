@@ -6,6 +6,7 @@ import com.example.firewall.FirewallState
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.background
@@ -70,6 +71,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -129,9 +131,14 @@ fun PrivacyScreen(
         // Master DNS Toggle Card
         item {
             Card(
+                onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    viewModel.setDnsFiltering(!prefs.dnsFilteringEnabled)
+                },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .testTag("master_dns_card"),
+                    .testTag("master_dns_card")
+                    .semantics { role = Role.Switch },
                 shape = M3ShapesTokens.CornerLargeIncreased,
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surface
@@ -347,7 +354,8 @@ fun PrivacyScreen(
                                 }
                             },
                             enabled = newDomainText.isNotBlank(),
-                            shape = M3ShapesTokens.CornerFull,
+                            shape = M3ShapesTokens.CornerMedium,
+                            modifier = Modifier.height(56.dp),
                             contentPadding = PaddingValues(horizontal = 16.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary)
                         ) {
@@ -546,7 +554,13 @@ fun CategoryCard(
     val haptic = LocalHapticFeedback.current
 
     Card(
-        modifier = modifier.fillMaxWidth(),
+        onClick = {
+            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+            onToggle(!enabled)
+        },
+        modifier = modifier
+            .fillMaxWidth()
+            .semantics { role = Role.Switch },
         shape = M3ShapesTokens.CornerLargeIncreased,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
@@ -662,7 +676,10 @@ fun CustomDomainItem(
         ) {
             Text(
                 text = item.domain,
-                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    fontWeight = FontWeight.SemiBold,
+                    fontFamily = FontFamily.Monospace
+                ),
                 color = if (item.isEnabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.weight(1f),
                 maxLines = 1,
