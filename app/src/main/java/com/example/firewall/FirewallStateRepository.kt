@@ -34,7 +34,9 @@ data class FirewallSnapshot(
     val blockedAppsCount: Int = 0,
     val blockedConnectionsCount: Int = 0,
     val lastErrorMessage: String? = null,
-    val activeNetwork: NetworkType = NetworkType.NONE
+    val activeNetwork: NetworkType = NetworkType.NONE,
+    val dnsProtectionEffective: Boolean = false,
+    val dnsStatusMessage: String? = null
 )
 
 class FirewallStateRepository private constructor(private val appContext: Context) {
@@ -71,14 +73,19 @@ class FirewallStateRepository private constructor(private val appContext: Contex
         requestAllTilesRefresh()
     }
 
-    fun setRunning(blockedApps: Int = _state.value.blockedAppsCount, blockedConnections: Int = _state.value.blockedConnectionsCount) {
+    fun setRunning(
+        blockedApps: Int = _state.value.blockedAppsCount,
+        blockedConnections: Int = _state.value.blockedConnectionsCount,
+        dnsEffective: Boolean = _state.value.dnsProtectionEffective
+    ) {
         _state.update {
             it.copy(
                 state = FirewallState.RUNNING,
                 blockedAppsCount = blockedApps,
                 blockedConnectionsCount = blockedConnections,
                 lastErrorMessage = null,
-                pauseUntilTimestamp = null
+                pauseUntilTimestamp = null,
+                dnsProtectionEffective = dnsEffective
             )
         }
         requestAllTilesRefresh()
@@ -90,7 +97,9 @@ class FirewallStateRepository private constructor(private val appContext: Contex
             it.copy(
                 state = nextState,
                 lastErrorMessage = errorMessage,
-                pauseUntilTimestamp = null
+                pauseUntilTimestamp = null,
+                dnsProtectionEffective = false,
+                dnsStatusMessage = null
             )
         }
         requestAllTilesRefresh()

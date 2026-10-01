@@ -1,5 +1,7 @@
 package com.example.ui.privacy
 
+import com.example.firewall.FirewallState
+
 
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
@@ -85,10 +87,12 @@ fun PrivacyScreen(
 ) {
     val blocklist by viewModel.blocklist.collectAsStateWithLifecycle()
     val prefs by viewModel.userPreferences.collectAsStateWithLifecycle()
+    val snapshot by viewModel.firewallSnapshot.collectAsStateWithLifecycle()
     val dnsLabel = stringResource(R.string.ui_dns_filtering)
     val haptic = LocalHapticFeedback.current
 
     var newDomainText by rememberSaveable { mutableStateOf("") }
+    val domainError by viewModel.domainValidationError.collectAsStateWithLifecycle()
 
     val adDomains = remember(blocklist) { blocklist.filter { it.category == "AD" } }
     val trackerDomains = remember(blocklist) { blocklist.filter { it.category == "TRACKER" } }
@@ -98,6 +102,22 @@ fun PrivacyScreen(
     val areAdsEnabled = remember(adDomains) { adDomains.any { it.isEnabled } }
     val areTrackersEnabled = remember(trackerDomains) { trackerDomains.any { it.isEnabled } }
     val isMalwareEnabled = remember(malwareDomains) { malwareDomains.any { it.isEnabled } }
+
+    // Derive truthful DNS status from both the preference AND the running firewall state
+    val dnsStatusResId = remember(prefs.dnsFilteringEnabled, snapshot.state) {
+        if (!prefs.dnsFilteringEnabled) {
+            R.string.dns_status_disabled
+        } else {
+            when (snapshot.state) {
+                FirewallState.RUNNING -> R.string.dns_status_active
+                FirewallState.STARTING -> R.string.dns_status_starting
+                FirewallState.PAUSED -> R.string.dns_status_paused
+                FirewallState.ERROR -> R.string.dns_status_error
+                FirewallState.STOPPED, FirewallState.VPN_PERMISSION_REQUIRED -> R.string.dns_status_saved_not_running
+            }
+        }
+    }
+    val isDnsEffective = prefs.dnsFilteringEnabled && snapshot.state == FirewallState.RUNNING
 
     LazyColumn(
         modifier = modifier
@@ -154,9 +174,15 @@ fun PrivacyScreen(
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
-                                text = if (prefs.dnsFilteringEnabled) "Active • Blocking known ad & telemetry domains" else "Disabled • DNS requests pass unfiltered",
+                                text = stringResource(dnsStatusResId),
                                 style = MaterialTheme.typography.bodySmall,
-                                color = if (prefs.dnsFilteringEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = when {
+                                    isDnsEffective -> MaterialTheme.colorScheme.primary
+                                    prefs.dnsFilteringEnabled && snapshot.state == FirewallState.STARTING -> MaterialTheme.colorScheme.tertiary
+                                    prefs.dnsFilteringEnabled && (snapshot.state == FirewallState.ERROR || snapshot.state == FirewallState.STOPPED || snapshot.state == FirewallState.VPN_PERMISSION_REQUIRED) -> MaterialTheme.colorScheme.error
+                                    prefs.dnsFilteringEnabled && snapshot.state == FirewallState.PAUSED -> MaterialTheme.colorScheme.tertiary
+                                    else -> MaterialTheme.colorScheme.onSurfaceVariant
+                                },
                             )
                         }
                     }
@@ -174,6 +200,36 @@ fun PrivacyScreen(
                         ),
                         modifier = Modifier.testTag("dns_toggle_switch").semantics { contentDescription = dnsLabel }
                     )
+                }
+            }
+        }
+
+        // DNS Engine Limitation Notice
+        if (prefs.dnsFilteringEnabled) {
+            item {
+                Card(
+                    shape = M3ShapesTokens.CornerMedium,
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.35f)),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.tertiary.copy(alpha = 0.3f))
+                ) {
+                    Row(
+                        modifier = Modifier.padding(14.dp),
+                        horizontalArrangement = Arrangement.spacedBy(AppSpacing.medium),
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.tertiary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Text(
+                            text = stringResource(R.string.dns_engine_notice),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onTertiaryContainer,
+                            lineHeight = 16.sp
+                        )
+                    }
                 }
             }
         }
@@ -254,29 +310,40 @@ fun PrivacyScreen(
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(AppSpacing.small),
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.Top
                     ) {
                         OutlinedTextField(
                             value = newDomainText,
-                            onValueChange = { newDomainText = it },
+                            onValueChange = {
+                                newDomainText = it
+                                viewModel.clearDomainValidationError()
+                            },
                             label = { Text(stringResource(R.string.domain_label)) },
                             placeholder = { Text(stringResource(R.string.ui_tracking_example_com)) },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
                             singleLine = true,
+                            isError = domainError != null,
+                            supportingText = if (domainError != null) {
+                                { Text(domainError!!, color = MaterialTheme.colorScheme.error) }
+                            } else null,
                             shape = M3ShapesTokens.CornerSmall,
                             modifier = Modifier.weight(1f),
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = MaterialTheme.colorScheme.primary,
                                 unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
                                 focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow
+                                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                                errorBorderColor = MaterialTheme.colorScheme.error
                             )
                         )
                         Button(
                             onClick = {
                                 if (newDomainText.isNotBlank()) {
                                     viewModel.addCustomBlocklistDomain(newDomainText)
-                                    newDomainText = ""
+                                    // Only clear on success — validation error preserves input
+                                    if (viewModel.domainValidationError.value == null) {
+                                        newDomainText = ""
+                                    }
                                 }
                             },
                             enabled = newDomainText.isNotBlank(),
@@ -436,12 +503,12 @@ fun PrivacyScreen(
             }
         }
 
-        // Technical Notice
+        // Resolver Limitation Notice
         item {
             Card(
                 shape = M3ShapesTokens.CornerMedium,
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.35f)),
+                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.tertiary.copy(alpha = 0.3f))
             ) {
                 Row(
                     modifier = Modifier.padding(14.dp),
@@ -451,13 +518,13 @@ fun PrivacyScreen(
                     Icon(
                         imageVector = Icons.Default.Info,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
+                        tint = MaterialTheme.colorScheme.tertiary,
                         modifier = Modifier.size(20.dp)
                     )
                     Text(
-                        text = stringResource(R.string.ui_local_dns_sinkhole_netguardian_intercepts_udp_port),
+                        text = stringResource(R.string.dns_resolver_notice),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = MaterialTheme.colorScheme.onTertiaryContainer,
                         lineHeight = 16.sp
                     )
                 }

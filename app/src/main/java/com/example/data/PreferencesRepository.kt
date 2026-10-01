@@ -20,11 +20,13 @@ enum class QuickMode(val label: String) {
 
 enum class UpstreamDnsType(val label: String, val primaryIp: String, val description: String) {
     SYSTEM_DEFAULT("System / Local Gateway", "10.1.10.1", "Uses your local Wi-Fi router or cellular ISP DNS"),
-    LOCAL_SINKHOLE("Local Loopback (Offline Only)", "127.0.0.1", "100% on-device offline sinkhole, no third-party server contacted"),
-    CUSTOM("Custom Upstream Resolver", "", "User-defined DNS server IP (e.g. your local Pi-hole)"),
+    ADGUARD("AdGuard DNS (Ad-Free)", "94.140.14.14", "Blocks ads, tracking, and telemetry across all queries"),
+    CONTROLD("Control D (Ad & Tracker Blocking)", "76.76.2.2", "High-performance privacy resolver that filters ads"),
     CLOUDFLARE("Cloudflare DNS (1.1.1.1)", "1.1.1.1", "Optional public privacy resolver"),
     QUAD9("Quad9 (9.9.9.9)", "9.9.9.9", "Optional public malware-blocking resolver"),
-    GOOGLE("Google DNS (8.8.8.8)", "8.8.8.8", "Optional public DNS resolver")
+    GOOGLE("Google DNS (8.8.8.8)", "8.8.8.8", "Optional public DNS resolver"),
+    CUSTOM("Custom Upstream Resolver", "", "User-defined DNS server IP (e.g. your local Pi-hole)"),
+    LOCAL_SINKHOLE("Local Loopback (Offline Only)", "127.0.0.1", "100% on-device offline sinkhole, no third-party server contacted")
 }
 
 data class UserPreferences(

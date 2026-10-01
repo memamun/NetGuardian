@@ -359,18 +359,32 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    // Domain validation feedback for the UI
+    private val _domainValidationError = MutableStateFlow<String?>(null)
+    val domainValidationError: StateFlow<String?> = _domainValidationError.asStateFlow()
+
+    fun clearDomainValidationError() {
+        _domainValidationError.value = null
+    }
+
     fun addCustomBlocklistDomain(domain: String) {
-        val trimmed = domain.trim().lowercase()
-        if (trimmed.isNotBlank()) {
-            viewModelScope.launch(Dispatchers.IO) {
-                dao.insertBlocklist(
-                    BlocklistEntity(
-                        domain = trimmed,
-                        category = "CUSTOM",
-                        isEnabled = true
+        val result = com.example.dns.DomainValidator.validate(domain)
+        when (result) {
+            is com.example.dns.DomainValidator.ValidationResult.Invalid -> {
+                _domainValidationError.value = result.errorMessage
+            }
+            is com.example.dns.DomainValidator.ValidationResult.Valid -> {
+                _domainValidationError.value = null
+                viewModelScope.launch(Dispatchers.IO) {
+                    dao.insertBlocklist(
+                        BlocklistEntity(
+                            domain = result.normalizedDomain,
+                            category = "CUSTOM",
+                            isEnabled = true
+                        )
                     )
-                )
-                firewallManager.notifyRulesChanged()
+                    firewallManager.notifyRulesChanged()
+                }
             }
         }
     }

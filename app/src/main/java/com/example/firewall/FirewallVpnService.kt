@@ -6,11 +6,13 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.net.ConnectivityManager
+import android.net.IpPrefix
 import android.net.VpnService
 import android.os.Build
 import android.os.ParcelFileDescriptor
 import android.os.PowerManager
 import android.util.Log
+import java.net.Inet4Address
 import com.example.data.PreferencesRepository
 import com.example.data.QuickMode
 import com.example.data.UpstreamDnsType
@@ -29,6 +31,9 @@ import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.net.InetAddress
 import java.nio.ByteBuffer
+import com.example.dns.DnsInterceptor
+import com.example.dns.DnsResolver
+import com.example.dns.DomainMatcher
 
 class FirewallVpnService : VpnService() {
 
@@ -49,6 +54,13 @@ class FirewallVpnService : VpnService() {
     private var userExplicitStop = false
     private var pauseJob: Job? = null
     private var blockedDomains = setOf<String>()
+
+    // DNS engine components
+    private lateinit var dnsResolver: DnsResolver
+    private val domainMatcher = DomainMatcher()
+    private lateinit var dnsInterceptor: DnsInterceptor
+    private var currentUpstreamDns: InetAddress? = null
+    private var dnsFilteringActive = false
 
     private var lastNotificationUpdateMs = 0L
 
@@ -83,16 +95,19 @@ class FirewallVpnService : VpnService() {
                 else -> com.example.firewall.NetworkType.NONE
             }
             firewallManager.setNetworkType(newType)
+            updateUnderlyingNetworks()
             reconfigureVpn()
         }
 
         override fun onLost(network: android.net.Network) {
             // Don't assume NONE — a cellular network may already be active.
             // reconfigureVpn() will query the real state.
+            updateUnderlyingNetworks()
             reconfigureVpn()
         }
 
         override fun onAvailable(network: android.net.Network) {
+            updateUnderlyingNetworks()
             reconfigureVpn()
         }
     }
@@ -105,6 +120,11 @@ class FirewallVpnService : VpnService() {
         database = AppDatabase.getDatabase(applicationContext)
         connectionLogger = ConnectionLogger(database.firewallDao())
         prefsRepo = PreferencesRepository(applicationContext)
+
+        // Initialize DNS engine
+        val connectivityMgr = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        dnsResolver = DnsResolver(this, connectivityMgr)
+        dnsInterceptor = DnsInterceptor(domainMatcher, dnsResolver, connectionLogger)
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             val pm = getSystemService(Context.POWER_SERVICE) as? PowerManager
@@ -120,11 +140,10 @@ class FirewallVpnService : VpnService() {
         }
         registerReceiver(systemEventReceiver, filter)
 
-        val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         val request = android.net.NetworkRequest.Builder()
             .addCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET)
             .build()
-        cm.registerNetworkCallback(request, networkCallback)
+        connectivityMgr.registerNetworkCallback(request, networkCallback)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -199,10 +218,15 @@ class FirewallVpnService : VpnService() {
 
     private suspend fun loadBlocklists() {
         try {
+            AppDatabase.populateDefaultBlocklists(database.firewallDao())
             val list = database.firewallDao().getActiveBlocklistDomainsSync()
             blockedDomains = list.toSet()
+            // Update the domain matcher atomically — this is thread-safe
+            // and takes effect immediately for in-flight DNS queries
+            domainMatcher.updateRules(blockedDomains)
         } catch (_: Exception) {
             blockedDomains = emptySet()
+            domainMatcher.updateRules(emptySet())
         }
     }
 
@@ -268,12 +292,24 @@ class FirewallVpnService : VpnService() {
 
             val (primaryDns, secondaryDns) = when (prefs.upstreamDnsType) {
                 UpstreamDnsType.LOCAL_SINKHOLE -> Pair("127.0.0.1", null)
-                UpstreamDnsType.SYSTEM_DEFAULT -> Pair("10.1.10.1", null)
+                UpstreamDnsType.SYSTEM_DEFAULT -> {
+                    // Discover real system DNS from the underlying network
+                    val systemDns = dnsResolver.discoverSystemDns()
+                    val primary = systemDns.firstOrNull()?.hostAddress ?: "8.8.8.8"
+                    val secondary = systemDns.getOrNull(1)?.hostAddress
+                    Pair(primary, secondary)
+                }
+                UpstreamDnsType.ADGUARD -> Pair("94.140.14.14", "94.140.15.15")
+                UpstreamDnsType.CONTROLD -> Pair("76.76.2.2", "76.76.10.2")
                 UpstreamDnsType.CUSTOM -> Pair(if (prefs.customDnsIp.isNotBlank()) prefs.customDnsIp else "127.0.0.1", null)
                 UpstreamDnsType.CLOUDFLARE -> Pair("1.1.1.1", "1.0.0.1")
                 UpstreamDnsType.QUAD9 -> Pair("9.9.9.9", "149.112.112.112")
                 UpstreamDnsType.GOOGLE -> Pair("8.8.8.8", "8.8.4.4")
             }
+
+            // Store the resolved upstream address for the DNS interceptor
+            currentUpstreamDns = try { InetAddress.getByName(primaryDns) } catch (_: Exception) { null }
+            dnsFilteringActive = prefs.dnsFilteringEnabled
 
             // Evaluate which apps are blocked
             var blockedCount = 0
@@ -312,7 +348,7 @@ class FirewallVpnService : VpnService() {
                 vpnInterface = null
                 try { oldIface?.close() } catch (_: Exception) {}
                 if (!isPaused) {
-                    stateRepo.setRunning(blockedApps = 0, blockedConnections = 0)
+                    stateRepo.setRunning(blockedApps = 0, blockedConnections = 0, dnsEffective = false)
                 }
                 updateForegroundNotification()
                 return
@@ -326,6 +362,43 @@ class FirewallVpnService : VpnService() {
 
             if (secondaryDns != null) {
                 builder.addDnsServer(secondaryDns)
+            }
+
+            // Exclude local private subnets (RFC 1918) and link-local ranges so local LAN devices
+            // (printers, IoT, local routers) are reached directly over physical Wi-Fi even by apps
+            // restricted from the public internet (blocking ads while retaining local printing).
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                listOf(
+                    Pair("192.168.0.0", 16),
+                    Pair("172.16.0.0", 12),
+                    Pair("169.254.0.0", 16)
+                ).forEach { (ip, prefix) ->
+                    try {
+                        builder.excludeRoute(IpPrefix(InetAddress.getByName(ip), prefix))
+                    } catch (e: Exception) {
+                        Log.d(TAG, "excludeRoute for $ip/$prefix ignored: ${e.message}")
+                    }
+                }
+
+                // Also dynamically exclude the active physical Wi-Fi subnet
+                try {
+                    val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
+                    val physNet = getPhysicalNetwork()
+                    if (physNet != null && cm != null) {
+                        val linkProps = cm.getLinkProperties(physNet)
+                        linkProps?.linkAddresses?.forEach { linkAddr ->
+                            if (linkAddr.address is Inet4Address && !linkAddr.address.isLoopbackAddress) {
+                                val prefix = linkAddr.prefixLength
+                                val host = linkAddr.address.hostAddress
+                                if (prefix in 8..30 && (host == null || !host.startsWith("10.1.10."))) {
+                                    try {
+                                        builder.excludeRoute(IpPrefix(linkAddr.address, prefix))
+                                    } catch (_: Exception) {}
+                                }
+                            }
+                        }
+                    }
+                } catch (_: Exception) {}
             }
 
             // Route ONLY blocked apps through the sinkhole VPN.
@@ -352,6 +425,9 @@ class FirewallVpnService : VpnService() {
             vpnInterface = newInterface
             oldInterface?.close()
 
+            // Update underlying networks so protected sockets can route directly over physical Wi-Fi/Cellular
+            updateUnderlyingNetworks()
+
             // Fetch total connection stats from database for accurate notification counts
             val totalConns = try {
                 val startOfDay = java.util.Calendar.getInstance().apply {
@@ -366,7 +442,11 @@ class FirewallVpnService : VpnService() {
             }
 
             if (!isPaused) {
-                stateRepo.setRunning(blockedApps = blockedCount, blockedConnections = totalConns)
+                stateRepo.setRunning(
+                    blockedApps = blockedCount,
+                    blockedConnections = totalConns,
+                    dnsEffective = prefs.dnsFilteringEnabled
+                )
             }
             updateForegroundNotification()
 
@@ -413,32 +493,56 @@ class FirewallVpnService : VpnService() {
                                     val queryDomain = com.example.dns.DnsPacketParser.parseDomainName(dnsPayload, 0, dnsPayload.size)
 
                                     if (queryDomain != null) {
-                                        val domainLower = queryDomain.lowercase(java.util.Locale.ROOT)
-                                        val isBlockedDomain = blockedDomains.any { blocked ->
-                                            val bLower = blocked.lowercase(java.util.Locale.ROOT)
-                                            domainLower == bLower || domainLower.endsWith(".$bLower")
-                                        }
+                                        // Use the DNS interceptor for filtering + resolution
+                                        val upstream = currentUpstreamDns
+                                        if (dnsFilteringActive && upstream != null) {
+                                            // DNS engine path: filter, then forward or sinkhole
+                                            val packetCopy = dnsPayload.copyOf()
+                                            val upstreamCopy = upstream
+                                            serviceScope.launch {
+                                                try {
+                                                    val result = dnsInterceptor.intercept(
+                                                        dnsQueryPayload = packetCopy,
+                                                        upstreamAddress = upstreamCopy,
+                                                        sourcePackageName = "Blocked App",
+                                                        sourceAppName = "Firewall Sinkhole"
+                                                    )
+                                                    val responsePayload = result.response
+                                                    if (responsePayload != null) {
+                                                        synchronized(outStream) {
+                                                            val replyPacket = buildDnsReplyPacket(buffer.copyOf(length), ipHeaderLen, responsePayload)
+                                                            try {
+                                                                outStream.write(replyPacket)
+                                                            } catch (_: Exception) {}
+                                                        }
+                                                    }
+                                                    throttledNotificationUpdate()
+                                                } catch (e: Exception) {
+                                                    Log.w(TAG, "DNS intercept error for $queryDomain", e)
+                                                }
+                                            }
+                                        } else {
+                                            // Legacy sinkhole path: block everything from blocked apps
+                                            val responsePayload = com.example.dns.DnsPacketParser.buildSinkholeResponse(dnsPayload, dnsPayload.size)
+                                            if (responsePayload != null) {
+                                                val replyPacket = buildDnsReplyPacket(buffer, ipHeaderLen, responsePayload)
+                                                try {
+                                                    outStream.write(replyPacket)
+                                                } catch (_: Exception) {}
+                                            }
 
-                                        // Sinkhole ALL DNS from blocked apps — they should have no network access
-                                        val responsePayload = com.example.dns.DnsPacketParser.buildSinkholeResponse(dnsPayload, dnsPayload.size)
-                                        if (responsePayload != null) {
-                                            val replyPacket = buildDnsReplyPacket(buffer, ipHeaderLen, responsePayload)
-                                            try {
-                                                outStream.write(replyPacket)
-                                            } catch (_: Exception) {}
+                                            connectionLogger.logConnection(
+                                                packageName = "Blocked App DNS",
+                                                appName = "Firewall Sinkhole",
+                                                destinationHost = queryDomain,
+                                                port = 53,
+                                                protocol = "DNS",
+                                                isBlocked = true,
+                                                blockReason = "App Blocked",
+                                                bytes = length.toLong()
+                                            )
+                                            throttledNotificationUpdate()
                                         }
-
-                                        connectionLogger.logConnection(
-                                            packageName = "Blocked App DNS",
-                                            appName = "Firewall Sinkhole",
-                                            destinationHost = queryDomain,
-                                            port = 53,
-                                            protocol = "DNS",
-                                            isBlocked = true,
-                                            blockReason = if (isBlockedDomain) "Tracker Blocklist Sinkhole" else "App Blocked",
-                                            bytes = length.toLong()
-                                        )
-                                        throttledNotificationUpdate()
                                     }
                                 }
                             }
@@ -493,11 +597,16 @@ class FirewallVpnService : VpnService() {
         buf.putShort(0x4000.toShort())
         buf.put(64.toByte())
         buf.put(17.toByte())
-        buf.putShort(0.toShort())
+        buf.putShort(0.toShort()) // Placeholder for checksum
 
         // Swap Source and Destination IPs
         buf.put(queryPacket.copyOfRange(16, 20))
         buf.put(queryPacket.copyOfRange(12, 16))
+
+        // Calculate and insert IPv4 Header Checksum (RFC 791 / RFC 1071)
+        val ipChecksum = calculateIpChecksum(reply, 0, 20)
+        reply[10] = ((ipChecksum.toInt() ushr 8) and 0xFF).toByte()
+        reply[11] = (ipChecksum.toInt() and 0xFF).toByte()
 
         // UDP Header
         val srcPort = ByteBuffer.wrap(queryPacket, ipHeaderLen + 2, 2).short
@@ -505,11 +614,52 @@ class FirewallVpnService : VpnService() {
         buf.putShort(srcPort)
         buf.putShort(destPort)
         buf.putShort((8 + dnsResponsePayload.size).toShort())
-        buf.putShort(0.toShort())
+        buf.putShort(0.toShort()) // 0 indicates checksum unused in IPv4 UDP (RFC 768)
 
         // DNS Payload
         buf.put(dnsResponsePayload)
         return reply
+    }
+
+    private fun calculateIpChecksum(header: ByteArray, offset: Int, length: Int): Short {
+        var sum = 0
+        var i = offset
+        while (i < offset + length) {
+            val high = header[i].toInt() and 0xFF
+            val low = header[i + 1].toInt() and 0xFF
+            sum += (high shl 8) or low
+            i += 2
+        }
+        while (sum > 0xFFFF) {
+            sum = (sum and 0xFFFF) + (sum ushr 16)
+        }
+        return (sum.inv() and 0xFFFF).toShort()
+    }
+
+    private fun updateUnderlyingNetworks() {
+        try {
+            val physNet = getPhysicalNetwork()
+            if (physNet != null) {
+                setUnderlyingNetworks(arrayOf(physNet))
+            } else {
+                setUnderlyingNetworks(null)
+            }
+        } catch (_: Exception) {}
+    }
+
+    private fun getPhysicalNetwork(): android.net.Network? {
+        val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager ?: return null
+        return try {
+            val allNets = cm.allNetworks
+            val nonVpnInternet = allNets.firstOrNull { net ->
+                val caps = cm.getNetworkCapabilities(net) ?: return@firstOrNull false
+                caps.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
+                !caps.hasTransport(android.net.NetworkCapabilities.TRANSPORT_VPN)
+            }
+            nonVpnInternet ?: cm.activeNetwork
+        } catch (_: Exception) {
+            cm.activeNetwork
+        }
     }
 
     private fun updateForegroundNotification() {

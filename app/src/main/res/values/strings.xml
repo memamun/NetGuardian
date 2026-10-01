@@ -216,4 +216,14 @@
     <string name="idle_blocked">Idle blocked</string>
     <string name="show_details">Show</string>
     <string name="hide_details">Hide</string>
+
+    <!-- Phase 1: Truthful DNS protection status -->
+    <string name="dns_status_active">Active • Filtering DNS for blocked apps</string>
+    <string name="dns_status_saved_not_running">Saved — will activate when firewall starts</string>
+    <string name="dns_status_disabled">Disabled • DNS requests pass unfiltered</string>
+    <string name="dns_status_paused">Paused — protection will resume automatically</string>
+    <string name="dns_status_error">Error — protection is not running</string>
+    <string name="dns_status_starting">Starting…</string>
+    <string name="dns_engine_notice">DNS filtering currently applies to blocked apps only. Allowed apps bypass the VPN and their DNS is not inspected. A future engine update will extend filtering to all apps.</string>
+    <string name="dns_resolver_notice">The selected upstream DNS resolver is actively used to forward and resolve all allowed domain queries while blocked domains are sinkholed to 0.0.0.0.</string>
 </resources>

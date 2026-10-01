@@ -8,23 +8,25 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
 
-class ConnectionLogger(private val dao: FirewallDao) {
+open class ConnectionLogger(private val dao: FirewallDao? = null) {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val logChannel = Channel<ConnectionLogEntity>(capacity = 500)
 
     init {
-        scope.launch {
-            for (log in logChannel) {
-                try {
-                    dao.insertLog(log)
-                } catch (_: Exception) {
-                    // Ignore transient write errors
+        if (dao != null) {
+            scope.launch {
+                for (log in logChannel) {
+                    try {
+                        dao.insertLog(log)
+                    } catch (_: Exception) {
+                        // Ignore transient write errors
+                    }
                 }
             }
         }
     }
 
-    fun logConnection(
+    open fun logConnection(
         packageName: String,
         appName: String,
         destinationHost: String,
