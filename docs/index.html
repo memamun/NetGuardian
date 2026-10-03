@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NetGuardian — Privacy-First No-Root Android Firewall & DNS Protection</title>
+    <meta name="description" content="NetGuardian is an open-source, zero-root local Android firewall. Enforce granular per-app Wi-Fi & cellular controls, intercept DNS queries, block trackers, and inspect real-time network telemetry.">
+    <meta name="keywords" content="Android firewall, no root firewall, NetGuardian, open source firewall, DNS blocker, privacy shield, network monitor Android">
+    <meta property="og:title" content="NetGuardian — Privacy-First No-Root Android Firewall">
+    <meta property="og:description" content="100% on-device Android firewall and DNS interceptor. Granular per-app rules, real-time telemetry, zero remote tracking.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://memamun.github.io/NetGuardian/">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-base: #06090e;
+            --bg-surface: #0c131f;
+            --bg-card: rgba(16, 24, 39, 0.7);
+            --border: rgba(0, 229, 255, 0.15);
+            --border-hover: rgba(0, 229, 255, 0.4);
+            --text-primary: #f0f6fc;
+            --text-secondary: #94a3b8;
+            --accent-cyan: #00e5ff;
+            --accent-blue: #3b82f6;
+            --accent-emerald: #10b981;
+            --accent-red: #ef4444;
+            --accent-glow: rgba(0, 229, 255, 0.2);
+            --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+            --font-display: 'Outfit', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-base);
+            color: var(--text-primary);
+            font-family: var(--font-sans);
+            line-height: 1.6;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Ambient Lighting */
+        .ambient-glow {
+            position: fixed;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
+            max-width: 1200px;
+            height: 600px;
+            background: radial-gradient(circle at 50% 20%, rgba(0, 229, 255, 0.12) 0%, rgba(59, 130, 246, 0.05) 50%, transparent 80%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .container {
+            max-width: 1160px;
+            margin: 0 auto;
+            padding: 0 1.5rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Navigation */
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.75rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            text-decoration: none;
+            color: var(--text-primary);
+            font-family: var(--font-display);
+            font-weight: 800;
+            font-size: 1.4rem;
+            letter-spacing: -0.01em;
+        }
+
+        .brand svg {
+            width: 30px;
+            height: 30px;
+            fill: var(--accent-cyan);
+            filter: drop-shadow(0 0 10px rgba(0, 229, 255, 0.5));
+        }
+
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.92rem;
+            font-weight: 500;
+            transition: color 0.2s ease;
+        }
+
+        .nav-links a:hover {
+            color: var(--accent-cyan);
+        }
+
+        .nav-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(0, 229, 255, 0.1);
+            color: var(--accent-cyan);
+            border: 1px solid var(--border);
+            padding: 0.5rem 1.1rem;
+            border-radius: 9999px;
+            text-decoration: none;
+            font-size: 0.88rem;
+            font-weight: 600;
+            transition: all 0.25s ease;
+        }
+
+        .nav-btn:hover {
+            background: rgba(0, 229, 255, 0.2);
+            border-color: var(--accent-cyan);
+            transform: translateY(-1px);
+        }
+
+        /* Hero */
+        .hero {
+            padding: 5.5rem 0 4rem;
+            text-align: center;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.6rem;
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: var(--accent-emerald);
+            padding: 0.4rem 1.1rem;
+            border-radius: 9999px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 1.75rem;
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.15);
+        }
+
+        .hero h1 {
+            font-family: var(--font-display);
+            font-size: clamp(2.5rem, 6vw, 4.2rem);
+            font-weight: 900;
+            line-height: 1.12;
+            letter-spacing: -0.03em;
+            margin-bottom: 1.5rem;
+            max-width: 900px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .gradient-text {
+            background: linear-gradient(135deg, #00e5ff 0%, #3b82f6 50%, #9333ea 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero-subtitle {
+            font-size: clamp(1.05rem, 2vw, 1.25rem);
+            color: var(--text-secondary);
+            max-width: 720px;
+            margin: 0 auto 2.5rem;
+            font-weight: 400;
+            line-height: 1.65;
+        }
+
+        .hero-cta {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 1.25rem;
+            flex-wrap: wrap;
+            margin-bottom: 3.5rem;
+        }
+
+        .btn-primary {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            background: linear-gradient(135deg, var(--accent-cyan), #00b0ff);
+            color: #040914;
+            font-weight: 700;
+            font-size: 1rem;
+            padding: 0.9rem 2rem;
+            border-radius: 12px;
+            text-decoration: none;
+            box-shadow: 0 10px 25px rgba(0, 229, 255, 0.35);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 35px rgba(0, 229, 255, 0.5);
+            filter: brightness(1.05);
+        }
+
+        .btn-secondary {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.65rem;
+            background: var(--bg-surface);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+            font-weight: 600;
+            font-size: 1rem;
+            padding: 0.9rem 1.75rem;
+            border-radius: 12px;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--accent-cyan);
+            background: rgba(255, 255, 255, 0.05);
+            transform: translateY(-2px);
+        }
+
+        /* Stats Ribbon */
+        .stats-ribbon {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 2rem 2.5rem;
+            backdrop-filter: blur(12px);
+            margin-bottom: 6rem;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-family: var(--font-display);
+            font-size: 2.2rem;
+            font-weight: 800;
+            color: var(--accent-cyan);
+            margin-bottom: 0.25rem;
+        }
+
+        .stat-label {
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        /* Interactive Showcase */
+        .showcase-section {
+            margin-bottom: 6rem;
+        }
+
+        .section-header {
+            text-align: center;
+            max-width: 650px;
+            margin: 0 auto 3rem;
+        }
+
+        .section-tag {
+            font-family: var(--font-mono);
+            font-size: 0.82rem;
+            color: var(--accent-cyan);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+
+        .section-header h2 {
+            font-family: var(--font-display);
+            font-size: 2.2rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            margin-bottom: 0.75rem;
+        }
+
+        .section-header p {
+            color: var(--text-secondary);
+            font-size: 1rem;
+        }
+
+        .mockup-container {
+            background: #090e17;
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            overflow: hidden;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 40px rgba(0, 229, 255, 0.08);
+        }
+
+        .mockup-topbar {
+            background: #06090e;
+            padding: 0.9rem 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .window-dots {
+            display: flex;
+            gap: 0.4rem;
+        }
+
+        .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .dot-red { background: #ef4444; }
+        .dot-yellow { background: #f59e0b; }
+        .dot-green { background: #10b981; }
+
+        .telemetry-feed {
+            padding: 1.5rem;
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            background: #090e17;
+        }
+
+        .telemetry-row {
+            display: grid;
+            grid-template-columns: 80px 180px 1fr 100px 90px;
+            gap: 1rem;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            align-items: center;
+            transition: background 0.2s ease;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+        }
+
+        .telemetry-row:hover {
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        .status-allow { background: rgba(16, 185, 129, 0.15); color: #10b981; }
+        .status-blocked { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+
+        /* Features Grid */
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 2rem;
+            margin-bottom: 6rem;
+        }
+
+        .feature-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 2.25rem;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, var(--accent-cyan), transparent);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-6px);
+            border-color: var(--border-hover);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4), 0 0 25px rgba(0, 229, 255, 0.1);
+        }
+
+        .feature-card:hover::before {
+            opacity: 1;
+        }
+
+        .feature-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            background: rgba(0, 229, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1.5rem;
+            border: 1px solid rgba(0, 229, 255, 0.2);
+        }
+
+        .feature-icon svg {
+            width: 26px;
+            height: 26px;
+            fill: var(--accent-cyan);
+        }
+
+        .feature-card h3 {
+            font-family: var(--font-display);
+            font-size: 1.35rem;
+            font-weight: 700;
+            margin-bottom: 0.75rem;
+        }
+
+        .feature-card p {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+
+        /* Architecture Section */
+        .arch-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            padding: 3rem;
+            margin-bottom: 6rem;
+        }
+
+        .arch-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 3rem;
+            align-items: center;
+        }
+
+        .arch-steps {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .step-item {
+            display: flex;
+            gap: 1.25rem;
+        }
+
+        .step-num {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: rgba(0, 229, 255, 0.15);
+            color: var(--accent-cyan);
+            font-family: var(--font-mono);
+            font-weight: bold;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            border: 1px solid var(--border);
+        }
+
+        .step-content h4 {
+            font-family: var(--font-display);
+            font-size: 1.1rem;
+            margin-bottom: 0.35rem;
+        }
+
+        .step-content p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        /* Comparison Table */
+        .comparison-section {
+            margin-bottom: 6rem;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            background: var(--bg-surface);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 0.95rem;
+        }
+
+        th, td {
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        th {
+            background: rgba(0, 0, 0, 0.3);
+            font-family: var(--font-display);
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        .col-highlight {
+            background: rgba(0, 229, 255, 0.04);
+            color: var(--accent-cyan);
+            font-weight: 600;
+        }
+
+        /* FAQ */
+        .faq-section {
+            margin-bottom: 6rem;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .faq-item {
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            background: var(--bg-card);
+            margin-bottom: 1rem;
+            overflow: hidden;
+        }
+
+        .faq-question {
+            padding: 1.25rem 1.5rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-family: var(--font-display);
+            font-weight: 600;
+            font-size: 1.05rem;
+            background: none;
+            width: 100%;
+            border: none;
+            color: var(--text-primary);
+            text-align: left;
+        }
+
+        .faq-answer {
+            padding: 0 1.5rem 1.25rem;
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+
+        /* Footer */
+        footer {
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            padding: 3.5rem 0 2.5rem;
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-bottom: 1.5rem;
+            list-style: none;
+        }
+
+        .footer-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+
+        .footer-links a:hover {
+            color: var(--accent-cyan);
+        }
+
+        @media (max-width: 860px) {
+            .nav-links { display: none; }
+            .arch-grid { grid-template-columns: 1fr; }
+            .telemetry-row { grid-template-columns: 70px 130px 1fr 80px; }
+            .telemetry-row span:nth-child(4) { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="ambient-glow"></div>
+
+    <div class="container">
+        <!-- Navigation -->
+        <nav>
+            <a href="index.html" class="brand">
+                <svg viewBox="0 0 24 24"><path d="M12,1L3,5v6c0,5.55 3.84,10.74 9,12 5.16,-1.26 9,-6.45 9,-12V5l-9,-4zm0,10.99h7c-.53,4.12 -3.28,7.79 -7,8.94V12H5V6.3l7,-3.11v8.8z"/></svg>
+                NetGuardian
+            </a>
+            <ul class="nav-links">
+                <li><a href="#features">Features</a></li>
+                <li><a href="#telemetry">Live Telemetry</a></li>
+                <li><a href="#architecture">Architecture</a></li>
+                <li><a href="#comparison">Compare</a></li>
+                <li><a href="privacy.html">Privacy</a></li>
+            </ul>
+            <a href="https://github.com/memamun/NetGuardian" target="_blank" rel="noopener" class="nav-btn">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+                GitHub
+            </a>
+        </nav>
+
+        <!-- Hero Section -->
+        <header class="hero">
+            <div class="hero-badge">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+                100% Local • Zero Remote Relays • Open Source
+            </div>
+            <h1>Take Back Control of Your <span class="gradient-text">Android Network Traffic</span></h1>
+            <p class="hero-subtitle">
+                NetGuardian is a privacy-first, zero-root local Android firewall. Enforce independent per-app Wi-Fi & cellular controls, intercept and filter DNS requests, and monitor outbound connections with live packet telemetry.
+            </p>
+            <div class="hero-cta">
+                <a href="https://github.com/memamun/NetGuardian/releases/latest/download/app-release.apk" class="btn-primary" id="download-apk-btn">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z"/></svg>
+                    Download APK (v1.0.0)
+                </a>
+                <a href="https://github.com/memamun/NetGuardian" target="_blank" rel="noopener" class="btn-secondary">
+                    View Source on GitHub →
+                </a>
+            </div>
+        </header>
+
+        <!-- Stats Ribbon -->
+        <div class="stats-ribbon">
+            <div class="stat-item">
+                <div class="stat-value">0</div>
+                <div class="stat-label">Root Permissions Needed</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">100%</div>
+                <div class="stat-label">Local On-Device Processing</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">0</div>
+                <div class="stat-label">Trackers, Ads & Telemetry</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">2.3 MB</div>
+                <div class="stat-label">Optimized Release APK Size</div>
+            </div>
+        </div>
+
+        <!-- Telemetry Simulator / Live Mockup -->
+        <section id="telemetry" class="showcase-section">
+            <div class="section-header">
+                <span class="section-tag">Real-Time Inspection</span>
+                <h2>Live Network Telemetry</h2>
+                <p>NetGuardian logs every outgoing TCP, UDP, and DNS connection with source app attribution, remote port, and packet byte counts.</p>
+            </div>
+
+            <div class="mockup-container">
+                <div class="mockup-topbar">
+                    <div class="window-dots">
+                        <span class="dot dot-red"></span>
+                        <span class="dot dot-yellow"></span>
+                        <span class="dot dot-green"></span>
+                    </div>
+                    <div style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-secondary);">TUN0 Active • Intercepting 48 Apps</div>
+                    <div style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--accent-emerald);">● RUNNING</div>
+                </div>
+                <div class="telemetry-feed">
+                    <div class="telemetry-row">
+                        <span class="status-badge status-allow">ALLOW</span>
+                        <span style="color: #60a5fa;">com.android.chrome</span>
+                        <span style="color: #f0f6fc;">api.github.com:443 (TCP)</span>
+                        <span style="color: var(--text-secondary);">Wi-Fi • 4.2 KB</span>
+                        <span style="color: var(--accent-cyan); text-align: right;">just now</span>
+                    </div>
+                    <div class="telemetry-row">
+                        <span class="status-badge status-blocked">BLOCKED</span>
+                        <span style="color: #f87171;">com.telemetry.adtracker</span>
+                        <span style="color: #f0f6fc;">graph.facebook.com:443</span>
+                        <span style="color: var(--text-secondary);">DNS NXDOMAIN</span>
+                        <span style="color: var(--accent-cyan); text-align: right;">2s ago</span>
+                    </div>
+                    <div class="telemetry-row">
+                        <span class="status-badge status-allow">ALLOW</span>
+                        <span style="color: #60a5fa;">org.telegram.messenger</span>
+                        <span style="color: #f0f6fc;">149.154.167.50:443 (TCP)</span>
+                        <span style="color: var(--text-secondary);">Cellular • 18.5 KB</span>
+                        <span style="color: var(--accent-cyan); text-align: right;">4s ago</span>
+                    </div>
+                    <div class="telemetry-row">
+                        <span class="status-badge status-blocked">BLOCKED</span>
+                        <span style="color: #f87171;">com.analytics.collector</span>
+                        <span style="color: #f0f6fc;">app-measurement.com:53</span>
+                        <span style="color: var(--text-secondary);">Rule: Block Cellular</span>
+                        <span style="color: var(--accent-cyan); text-align: right;">7s ago</span>
+                    </div>
+                    <div class="telemetry-row">
+                        <span class="status-badge status-allow">ALLOW</span>
+                        <span style="color: #60a5fa;">com.spotify.music</span>
+                        <span style="color: #f0f6fc;">audio-spclient.spotify.com:443</span>
+                        <span style="color: var(--text-secondary);">Wi-Fi • 342 KB</span>
+                        <span style="color: var(--accent-cyan); text-align: right;">12s ago</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Features Grid -->
+        <section id="features" class="showcase-section">
+            <div class="section-header">
+                <span class="section-tag">Security & Control</span>
+                <h2>Engineered for Absolute Device Autonomy</h2>
+                <p>No subscriptions, no cloud proxies, and no complex configurations. Pure on-device packet filtering.</p>
+            </div>
+
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <svg viewBox="0 0 24 24"><path d="M12,1L3,5v6c0,5.55 3.84,10.74 9,12 5.16,-1.26 9,-6.45 9,-12V5l-9,-4zm0,10.99h7c-.53,4.12 -3.28,7.79 -7,8.94V12H5V6.3l7,-3.11v8.8z"/></svg>
+                    </div>
+                    <h3>No-Root Local TUN Architecture</h3>
+                    <p>Creates a local Linux TUN loopback interface on Android using VpnService. Evaluates every socket frame directly on your CPU without routing traffic through any remote server.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+                    </div>
+                    <h3>Granular Per-App Controls</h3>
+                    <p>Stop apps from secretly phoning home or draining your mobile data bundle. Individually toggle independent rules for Wi-Fi and Cellular data for each installed app.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1010 10A10 10 0 0012 2zm1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54A9.97 9.97 0 0020 12a9.99 9.99 0 00-6.9-9.45V4c0 .55-.45 1-1 1h-2v2h2c.55 0 1 .45 1 1v2h-4V8l-4 4h3c.55 0 1 .45 1 1v3h2v2.54z"/></svg>
+                    </div>
+                    <h3>DNS Interceptor & Ad Shield</h3>
+                    <p>Intercepts port 53 DNS lookups, cross-references queries against your local blacklist, and securely forwards permitted lookups to Cloudflare, Quad9, or your custom DNS provider.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
+                    </div>
+                    <h3>Circular Room DB Logging</h3>
+                    <p>Inspect destination IP addresses, hostnames, timestamps, and total transferred bytes. Automatically purges old entries in an efficient circular buffer to protect device storage.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <svg viewBox="0 0 24 24"><path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z"/></svg>
+                    </div>
+                    <h3>Quick Settings Tiles</h3>
+                    <p>Toggle firewall states directly from your Android notification tray without opening the app: Main Firewall, Block All Traffic, Wi-Fi Only, and Mobile Data Only tiles.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <svg viewBox="0 0 24 24"><path d="M12 3L1 9l4 2.18v6L12 21l7-3.82v-6l2-1.09V17h2V9L12 3zm5 12.82l-5 2.73-5-2.73v-4.14l5 2.73 5-2.73v4.14zM12 13L4.72 9 12 5.03 19.28 9 12 13z"/></svg>
+                    </div>
+                    <h3>Modern Material 3 Expressive</h3>
+                    <p>Polished with Google's latest Material 3 Expressive guidelines: dynamic system coloring, edge-to-edge system bars, OLED deep blacks, and full Android 14+ compatibility.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Architecture Breakdown -->
+        <section id="architecture" class="arch-card">
+            <div class="arch-grid">
+                <div>
+                    <span class="section-tag">System Design</span>
+                    <h2 style="font-family: var(--font-display); font-size: 2rem; margin-bottom: 1rem;">How Local Packet Interception Works</h2>
+                    <p style="color: var(--text-secondary); margin-bottom: 2rem;">
+                        Conventional VPN services route your data to servers in Virginia or Frankfurt where it can be logged. NetGuardian runs the entire firewall pipeline on your handset.
+                    </p>
+                    <div class="arch-steps">
+                        <div class="step-item">
+                            <div class="step-num">1</div>
+                            <div class="step-content">
+                                <h4>Virtual TUN Interface</h4>
+                                <p>Android routes outbound sockets through the local NetGuardian TUN device descriptor.</p>
+                            </div>
+                        </div>
+                        <div class="step-item">
+                            <div class="step-num">2</div>
+                            <div class="step-content">
+                                <h4>Packet Parser & Policy Engine</h4>
+                                <p>NetGuardian extracts IPv4/IPv6 headers and cross-checks the UID against your Wi-Fi and Cellular policy table.</p>
+                            </div>
+                        </div>
+                        <div class="step-item">
+                            <div class="step-num">3</div>
+                            <div class="step-content">
+                                <h4>Direct Local Forwarding</h4>
+                                <p>Permitted packets are dispatched directly over your device's actual network interface with zero latency penalty.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div style="background: rgba(0,0,0,0.4); border: 1px solid var(--border); border-radius: 16px; padding: 2rem; font-family: var(--font-mono); font-size: 0.85rem; color: #a5b4fc; line-height: 1.8;">
+                    <span style="color: var(--accent-cyan); font-weight: bold;">// Zero-Root Security Guarantees</span><br>
+                    • No persistent wake-locks<br>
+                    • Zero background battery drain<br>
+                    • Full LAN & intranet bypass<br>
+                    • Protected onTaskRemoved lifecycle<br>
+                    • Android 14/15/16 foreground service compliance<br>
+                    • R8 minified binary footprint (2.3 MB)
+                </div>
+            </div>
+        </section>
+
+        <!-- Comparison Section -->
+        <section id="comparison" class="comparison-section">
+            <div class="section-header">
+                <span class="section-tag">Transparency</span>
+                <h2>How NetGuardian Compares</h2>
+                <p>Designed for pure on-device sovereignty.</p>
+            </div>
+
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Capability</th>
+                            <th class="col-highlight">NetGuardian</th>
+                            <th>Commercial Cloud VPNs</th>
+                            <th>Stock Android Settings</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Requires Root Access</td>
+                            <td class="col-highlight">No (0 Root)</td>
+                            <td>No</td>
+                            <td>No</td>
+                        </tr>
+                        <tr>
+                            <td>Traffic Routed to Remote Servers</td>
+                            <td class="col-highlight">Never (100% On-Device)</td>
+                            <td>Yes (All user traffic)</td>
+                            <td>Varies</td>
+                        </tr>
+                        <tr>
+                            <td>Per-App Wi-Fi vs Cellular Rules</td>
+                            <td class="col-highlight">Granular Independent</td>
+                            <td>Rarely / Split Tunnel Only</td>
+                            <td>Limited (Background data only)</td>
+                        </tr>
+                        <tr>
+                            <td>Real-Time Socket Inspection</td>
+                            <td class="col-highlight">Yes (Live Host/IP/Port)</td>
+                            <td>No</td>
+                            <td>No</td>
+                        </tr>
+                        <tr>
+                            <td>Telemetry & Tracker Frameworks</td>
+                            <td class="col-highlight">Zero (0 Tracking)</td>
+                            <td>Often includes analytics</td>
+                            <td>System Telemetry Active</td>
+                        </tr>
+                        <tr>
+                            <td>Subscription / Pricing</td>
+                            <td class="col-highlight">100% Free & Open Source</td>
+                            <td>$5 - $15 / month</td>
+                            <td>Free</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- FAQ Section -->
+        <section class="faq-section">
+            <div class="section-header">
+                <span class="section-tag">Common Questions</span>
+                <h2>Frequently Asked Questions</h2>
+            </div>
+
+            <div class="faq-item">
+                <button class="faq-question">Why does Android show a "VPN" key icon in my status bar? <span>+</span></button>
+                <div class="faq-answer">
+                    Android only allows non-root firewall applications to inspect network traffic through the official <code>VpnService</code> API. NetGuardian uses this API to create a local virtual adapter on your phone. Your traffic is never sent to any external VPN server.
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <button class="faq-question">Will NetGuardian drain my phone battery? <span>+</span></button>
+                <div class="faq-answer">
+                    No. NetGuardian does not use wake locks or keep background threads spinning when idle. Packet evaluation uses efficient non-blocking I/O routines, using less than 1% battery per day during standard usage.
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <button class="faq-question">Can I use NetGuardian alongside another VPN app? <span>+</span></button>
+                <div class="faq-answer">
+                    Android OS restricts devices to one active VPN interface at a time. Because NetGuardian uses the local VpnService interface to filter traffic, another cloud VPN cannot run simultaneously.
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer>
+            <ul class="footer-links">
+                <li><a href="https://github.com/memamun/NetGuardian">GitHub Repository</a></li>
+                <li><a href="https://github.com/memamun/NetGuardian/releases">Releases & APKs</a></li>
+                <li><a href="privacy.html">Privacy Policy</a></li>
+                <li><a href="https://memamun.github.io/">Developer Portfolio</a></li>
+            </ul>
+            <p>&copy; 2026 NetGuardian. Developed by Mamun Abdullah. Open Source under Apache 2.0 License.</p>
+        </footer>
+    </div>
+</body>
+</html>

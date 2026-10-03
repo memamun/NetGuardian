@@ -81,6 +81,10 @@ interface FirewallDao {
     @Query("SELECT SUM(bytesTransferred) FROM connection_logs WHERE isBlocked = 1")
     fun getTotalBytesBlocked(): Flow<Long?>
 
+    // Keep network history bounded; this is a product retention policy, not an Android requirement.
+    @Query("DELETE FROM connection_logs WHERE timestamp < :oldest OR id NOT IN (SELECT id FROM connection_logs ORDER BY timestamp DESC, id DESC LIMIT 10000)")
+    suspend fun pruneLogs(oldest: Long)
+
     // --- Privacy Blocklist ---
     @Query("SELECT * FROM privacy_blocklist ORDER BY category ASC, domain ASC")
     fun getAllBlocklist(): Flow<List<BlocklistEntity>>

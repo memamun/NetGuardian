@@ -217,7 +217,7 @@ class DnsInterceptorTest {
     }
 
     @Test
-    fun `unparseable query payload forwards blindly to resolver`() = runBlocking {
+    fun `unparseable query payload is rejected without contacting resolver`() = runBlocking {
         val corruptedPayload = byteArrayOf(0x01, 0x02) // truncated header
         val result = interceptor.intercept(
             dnsQueryPayload = corruptedPayload,
@@ -226,6 +226,8 @@ class DnsInterceptorTest {
 
         assertFalse(result.blocked)
         assertNull(result.domain)
-        assertNotNull(fakeResolver.lastReceivedQuery)
+        assertNull(fakeResolver.lastReceivedQuery)
+        assertNull(result.response)
+        assertEquals("Invalid DNS query", result.blockReason)
     }
 }

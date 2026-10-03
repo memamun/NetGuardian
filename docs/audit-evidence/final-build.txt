@@ -1,0 +1,190 @@
+Reusing configuration cache.
+> Task :app:preBuild UP-TO-DATE
+> Task :app:generateReleaseAssets UP-TO-DATE
+> Task :app:preDebugBuild UP-TO-DATE
+> Task :app:generateDebugAssets UP-TO-DATE
+> Task :app:preReleaseBuild UP-TO-DATE
+> Task :app:preDebugUnitTestBuild UP-TO-DATE
+> Task :app:generateDebugAndroidTestAssets UP-TO-DATE
+> Task :app:clean
+> Task :app:mergeDebugNativeDebugMetadata NO-SOURCE
+> Task :app:generateDebugResources
+> Task :app:generateDebugBuildConfig
+> Task :app:processDebugNavigationResources
+> Task :app:javaPreCompileDebug
+> Task :app:mergeDebugAssets
+> Task :app:compressDebugAssets
+> Task :app:desugarDebugFileDependencies
+> Task :app:checkDebugAarMetadata
+> Task :app:mapDebugSourceSetPaths
+> Task :app:compileDebugNavigationResources
+> Task :app:checkDebugDuplicateClasses
+> Task :app:packageDebugResources
+> Task :app:parseDebugLocalResources
+> Task :app:generateDebugRFile
+> Task :app:mergeLibDexDebug
+> Task :app:createDebugCompatibleScreenManifests
+> Task :app:extractDeepLinksDebug
+> Task :app:processDebugMainManifest
+> Task :app:processDebugManifest
+> Task :app:processDebugManifestForPackage
+> Task :app:mergeDebugJniLibFolders
+> Task :app:mergeDebugNativeLibs
+
+> Task :app:stripDebugDebugSymbols
+Unable to strip the following libraries, packaging them as they are: libandroidx.graphics.path.so, libdatastore_shared_counter.so. Run with --info option to learn more.
+
+> Task :app:validateSigningDebug
+> Task :app:writeDebugAppMetadata
+> Task :app:writeDebugSigningConfigVersions
+> Task :app:mergeReleaseJniLibFolders
+> Task :app:mergeReleaseNativeLibs
+
+> Task :app:stripReleaseDebugSymbols
+Unable to strip the following libraries, packaging them as they are: libandroidx.graphics.path.so, libdatastore_shared_counter.so. Run with --info option to learn more.
+
+> Task :app:extractReleaseNativeSymbolTables
+> Task :app:mergeReleaseNativeDebugMetadata NO-SOURCE
+> Task :app:checkReleaseDuplicateClasses
+> Task :app:generateReleaseBuildConfig
+> Task :app:generateReleaseResources
+> Task :app:packageReleaseResources
+> Task :app:processReleaseNavigationResources
+> Task :app:parseReleaseLocalResources
+> Task :app:generateReleaseRFile
+> Task :app:mergeDebugResources
+> Task :app:kspReleaseKotlin
+> Task :app:kspDebugKotlin
+> Task :app:processDebugResources
+> Task :app:javaPreCompileRelease
+> Task :app:checkReleaseAarMetadata
+> Task :app:mapReleaseSourceSetPaths
+> Task :app:compileReleaseNavigationResources
+> Task :app:mergeExtDexDebug
+> Task :app:createReleaseCompatibleScreenManifests
+> Task :app:extractDeepLinksRelease
+> Task :app:processReleaseMainManifest
+> Task :app:processReleaseManifest
+> Task :app:processReleaseManifestForPackage
+> Task :app:desugarReleaseFileDependencies
+> Task :app:mergeReleaseStartupProfile UP-TO-DATE
+> Task :app:mergeReleaseResources
+> Task :app:mergeExtDexRelease
+> Task :app:mergeReleaseArtProfile
+> Task :app:mergeReleaseAssets
+> Task :app:compressReleaseAssets
+> Task :app:extractReleaseVersionControlInfo
+> Task :app:extractProguardFiles
+> Task :app:writeReleaseAppMetadata
+> Task :app:writeReleaseSigningConfigVersions
+> Task :app:processApplicationManifestReleaseForBundle
+> Task :app:processReleaseResources
+> Task :app:optimizeReleaseResources
+> Task :app:bundleReleaseResources
+> Task :app:parseReleaseIntegrityConfig UP-TO-DATE
+> Task :app:javaPreCompileDebugUnitTest
+> Task :app:packageDebugUnitTestForUnitTest
+> Task :app:processDebugUnitTestManifest
+> Task :app:generateDebugUnitTestConfig
+> Task :app:preDebugAndroidTestBuild SKIPPED
+> Task :app:processDebugAndroidTestManifest
+> Task :app:generateDebugAndroidTestBuildConfig
+> Task :app:generateDebugAndroidTestResources
+> Task :app:packageDebugAndroidTestResources
+> Task :app:processDebugAndroidTestNavigationResources
+> Task :app:parseDebugAndroidTestLocalResources
+> Task :app:generateDebugAndroidTestRFile
+> Task :app:javaPreCompileDebugAndroidTest
+> Task :app:mergeDebugAndroidTestAssets
+> Task :app:compressDebugAndroidTestAssets
+> Task :app:checkDebugAndroidTestDuplicateClasses
+> Task :app:desugarDebugAndroidTestFileDependencies
+> Task :app:mergeExtDexDebugAndroidTest
+> Task :app:mergeLibDexDebugAndroidTest
+> Task :app:checkDebugAndroidTestAarMetadata
+> Task :app:mapDebugAndroidTestSourceSetPaths
+> Task :app:compileDebugAndroidTestNavigationResources
+> Task :app:mergeDebugAndroidTestResources
+> Task :app:collectReleaseDependencies
+> Task :app:configureReleaseDependencies
+> Task :app:mergeDebugAndroidTestJniLibFolders
+> Task :app:mergeDebugAndroidTestNativeLibs NO-SOURCE
+> Task :app:stripDebugAndroidTestDebugSymbols NO-SOURCE
+> Task :app:validateSigningDebugAndroidTest
+> Task :app:writeDebugAndroidTestSigningConfigVersions
+> Task :app:processDebugAndroidTestResources
+> Task :app:compileReleaseKotlin
+> Task :app:compileDebugKotlin
+w: file:///home/mamun/antigravity/NetGuardian/app/src/main/java/com/example/dns/DnsResolver.kt:52:30 'val allNetworks: Array<(out) Network!>' is deprecated. Deprecated in Java.
+w: file:///home/mamun/antigravity/NetGuardian/app/src/main/java/com/example/firewall/FirewallVpnService.kt:644:30 'val allNetworks: Array<(out) Network!>' is deprecated. Deprecated in Java.
+
+> Task :app:compileReleaseKotlin
+w: file:///home/mamun/antigravity/NetGuardian/app/src/main/java/com/example/dns/DnsResolver.kt:52:30 'val allNetworks: Array<(out) Network!>' is deprecated. Deprecated in Java.
+w: file:///home/mamun/antigravity/NetGuardian/app/src/main/java/com/example/firewall/FirewallVpnService.kt:644:30 'val allNetworks: Array<(out) Network!>' is deprecated. Deprecated in Java.
+
+> Task :app:processReleaseJavaRes
+> Task :app:processDebugJavaRes
+> Task :app:compileReleaseJavaWithJavac
+> Task :app:compileDebugJavaWithJavac
+> Task :app:mergeDebugJavaResource
+> Task :app:generateReleaseLintVitalReportModel
+> Task :app:mergeReleaseJavaResource
+> Task :app:dexBuilderRelease
+> Task :app:bundleDebugClassesToRuntimeJar
+> Task :app:mergeReleaseGlobalSynthetics
+> Task :app:dexBuilderDebug
+> Task :app:bundleDebugClassesToCompileJar
+> Task :app:mergeProjectDexDebug
+> Task :app:kspDebugUnitTestKotlin
+> Task :app:packageDebug
+> Task :app:createDebugApkListingFileRedirect
+> Task :app:assembleDebug
+> Task :app:generateDebugAndroidTestLintModel
+> Task :app:generateDebugLintReportModel
+> Task :app:generateDebugUnitTestLintModel
+> Task :app:mergeDexRelease
+> Task :app:compileReleaseArtProfile
+> Task :app:buildReleasePreBundle
+> Task :app:lintAnalyzeDebugAndroidTest
+> Task :app:lintVitalAnalyzeRelease
+> Task :app:lintAnalyzeDebugUnitTest
+> Task :app:kspDebugAndroidTestKotlin
+> Task :app:compileDebugUnitTestKotlin
+> Task :app:compileDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :app:processDebugUnitTestJavaRes
+> Task :app:lintAnalyzeDebug
+> Task :app:compileDebugAndroidTestKotlin
+> Task :app:compileDebugAndroidTestJavaWithJavac
+> Task :app:processDebugAndroidTestJavaRes
+> Task :app:mergeDebugAndroidTestJavaResource
+> Task :app:dexBuilderDebugAndroidTest
+> Task :app:mergeProjectDexDebugAndroidTest
+> Task :app:packageDebugAndroidTest
+> Task :app:createDebugAndroidTestApkListingFileRedirect
+> Task :app:lintVitalReportRelease SKIPPED
+> Task :app:lintVitalRelease SKIPPED
+> Task :app:packageRelease
+> Task :app:createReleaseApkListingFileRedirect
+> Task :app:assembleRelease
+> Task :app:packageReleaseBundle
+> Task :app:signReleaseBundle
+> Task :app:produceReleaseBundleIdeListingFile
+> Task :app:createReleaseBundleListingFileRedirect
+> Task :app:bundleRelease
+Shell command failed (255): appops set androidx.test.services MANAGE_EXTERNAL_STORAGE allow
+Error: No UID for androidx.test.services in user 0
+Starting 1 tests on SM-A525F - 14
+Finished 1 tests on SM-A525F - 14
+> Task :app:connectedDebugAndroidTest
+> Task :app:testDebugUnitTest
+> Task :app:finalizeTestRoborazziDebug SKIPPED
+
+> Task :app:lintReportDebug
+Wrote HTML report to file:///home/mamun/antigravity/NetGuardian/app/build/reports/lint-results-debug.html
+
+> Task :app:lintDebug
+> Task :app:lint
+
+BUILD SUCCESSFUL in 3m 6s
+145 actionable tasks: 143 executed, 2 up-to-date
+Configuration cache entry reused.

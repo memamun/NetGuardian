@@ -9,6 +9,7 @@ import com.example.data.PreferencesRepository
 import com.example.data.QuickMode
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -41,7 +42,9 @@ data class FirewallSnapshot(
 
 class FirewallStateRepository private constructor(private val appContext: Context) {
 
-    private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+    private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob() + CoroutineExceptionHandler { _, _ ->
+        setError("Could not load firewall settings. Reopen NetGuardian to retry.")
+    })
     private val prefsRepo = PreferencesRepository(appContext)
 
     private val _state = MutableStateFlow(FirewallSnapshot())
@@ -55,7 +58,7 @@ class FirewallStateRepository private constructor(private val appContext: Contex
                     current.copy(
                         isBlockAllActive = prefs.activeQuickMode == QuickMode.BLOCK_NON_SYSTEM,
                         isWifiOnlyActive = prefs.activeQuickMode == QuickMode.WIFI_ONLY,
-                        isMobileDataBlocked = prefs.activeQuickMode == QuickMode.MOBILE_ONLY
+                        isMobileDataBlocked = prefs.activeQuickMode == QuickMode.WIFI_ONLY
                     )
                 }
                 requestAllTilesRefresh()
@@ -109,6 +112,7 @@ class FirewallStateRepository private constructor(private val appContext: Contex
         _state.update {
             it.copy(
                 state = FirewallState.PAUSED,
+                dnsProtectionEffective = false,
                 pauseUntilTimestamp = untilTimestamp
             )
         }
@@ -131,6 +135,7 @@ class FirewallStateRepository private constructor(private val appContext: Contex
         _state.update {
             it.copy(
                 state = FirewallState.ERROR,
+                dnsProtectionEffective = false,
                 lastErrorMessage = message,
                 pauseUntilTimestamp = null
             )

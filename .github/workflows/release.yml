@@ -1,0 +1,114 @@
+name: Build & Release NetGuardian
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version_tag:
+        description: 'Release Tag (e.g. v1.0.0)'
+        required: false
+        default: 'v1.0.0'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build & Release APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+          cache: 'gradle'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Prepare Signing Keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "Decoding release.keystore from repository secret..."
+            echo "$KEYSTORE_BASE64" | base64 --decode > release.keystore
+          else
+            echo "No KEYSTORE_BASE64 secret found. Generating CI release keystore..."
+            keytool -genkeypair -v -keystore release.keystore -alias netguardian \
+              -keyalg RSA -keysize 2048 -validity 10000 \
+              -storepass netguardian123 -keypass netguardian123 \
+              -dname "CN=NetGuardian, OU=Security, O=NetGuardian, L=City, ST=State, C=US"
+          fi
+
+      - name: Build Release APK & Bundle
+        env:
+          KEYSTORE_PATH: release.keystore
+          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD || 'netguardian123' }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS || 'netguardian' }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD || 'netguardian123' }}
+        run: |
+          chmod +x ./gradlew
+          ./gradlew assembleRelease bundleRelease --stacktrace
+
+      - name: Generate Checksums
+        run: |
+          cd app/build/outputs/apk/release/
+          sha256sum app-release.apk > app-release.apk.sha256
+          cd -
+          cd app/build/outputs/bundle/release/
+          sha256sum app-release.aab > app-release.aab.sha256
+          cd -
+
+      - name: Determine Release Tag
+        id: get_tag
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "TAG_NAME=${{ github.event.inputs.version_tag }}" >> $GITHUB_OUTPUT
+          else
+            echo "TAG_NAME=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.get_tag.outputs.TAG_NAME }}
+          name: "NetGuardian ${{ steps.get_tag.outputs.TAG_NAME }}"
+          body: |
+            ## 🛡️ NetGuardian ${{ steps.get_tag.outputs.TAG_NAME }} Production Release
+
+            Privacy-First, Zero-Root Android Firewall & Real-Time Network Telemetry.
+
+            ### ✨ Highlights & Features
+            - **No-Root Local Firewall**: Intercepts socket connections natively on-device using Android's `VpnService` interface. Zero remote servers, 100% on-device routing.
+            - **Granular Per-App Controls**: Independently permit or restrict Wi-Fi and Cellular data per installed application.
+            - **Custom DNS & Threat Shield**: Configure upstream DNS (Cloudflare, Quad9, AdGuard, custom) with real-time domain filtering and query logs.
+            - **Live Connection Telemetry**: Real-time inspection of remote hostnames, IP addresses, socket ports, TCP/UDP protocols, and byte transfer metrics.
+            - **Modern M3 Expressive UI**: Adaptive Material Design 3 theme with Dynamic Color support and OLED dark mode.
+            - **Hardened Security & Stability**: Minified with R8, foreground service startup crash prevention, bounded icon caching, and destructive Room DB migration fallback.
+
+            ### 📦 Release Assets
+            - `app-release.apk`: Signed standalone installation package for Android 8.0+ (Oreo to Android 16).
+            - `app-release.aab`: Production Android App Bundle for Google Play Store.
+            - `app-release.apk.sha256`: SHA-256 integrity verification hash.
+            - `app-release.aab.sha256`: SHA-256 integrity verification hash.
+          files: |
+            app/build/outputs/apk/release/app-release.apk
+            app/build/outputs/apk/release/app-release.apk.sha256
+            app/build/outputs/bundle/release/app-release.aab
+            app/build/outputs/bundle/release/app-release.aab.sha256
+          draft: false
+          prerelease: false

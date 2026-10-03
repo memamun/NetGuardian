@@ -190,7 +190,7 @@ class FirewallNotificationManager(private val context: Context) {
         }
         return PendingIntent.getActivity(
             context,
-            100,
+            100 + destinationRoute.hashCode(),
             intent,
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
@@ -200,7 +200,7 @@ class FirewallNotificationManager(private val context: Context) {
         val intent = Intent(context, FirewallVpnService::class.java).apply {
             action = actionStr
         }
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && actionStr == FirewallVpnService.ACTION_START) {
             PendingIntent.getForegroundService(
                 context,
                 requestCode,

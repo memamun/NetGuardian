@@ -16,7 +16,7 @@ import kotlinx.coroutines.launch
         BlocklistEntity::class
     ],
     version = 2,
-    exportSchema = false
+    exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
 

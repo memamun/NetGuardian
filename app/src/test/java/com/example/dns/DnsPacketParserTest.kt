@@ -128,4 +128,45 @@ class DnsPacketParserTest {
         val lastFour = response.takeLast(4)
         assertTrue("Expected 0.0.0.0 sinkhole IP", lastFour.all { it == 0.toByte() })
     }
+
+    @Test
+    fun `reject invalid bounds without throwing`() {
+        val query = buildDnsQuery("example.com")
+        assertNull(DnsPacketParser.parseDomainName(query, -1, query.size))
+        assertNull(DnsPacketParser.parseDomainName(query, 1, Int.MAX_VALUE))
+        assertNull(DnsPacketParser.buildSinkholeResponse(query, query.size + 1))
+    }
+
+    @Test
+    fun `parse question at nonzero offset`() {
+        val query = buildDnsQuery("example.com")
+        assertEquals("example.com", DnsPacketParser.parseDomainName(ByteArray(7) + query, 7, query.size))
+    }
+
+    @Test
+    fun `reject unterminated and incomplete questions`() {
+        val query = buildDnsQuery("example.com")
+        assertNull(DnsPacketParser.parseDomainName(query.copyOf(query.size - 5)))
+        assertNull(DnsPacketParser.parseDomainName(query.copyOf(query.size - 1)))
+    }
+
+    @Test
+    fun `AAAA sinkhole has matching type and sixteen zero bytes`() {
+        val query = buildDnsQuery("example.com")
+        query[query.size - 3] = 28
+        val reply = DnsPacketParser.buildSinkholeResponse(query, query.size)!!
+        assertEquals(28, ByteBuffer.wrap(reply, query.size + 2, 2).short.toInt())
+        assertEquals(16, ByteBuffer.wrap(reply, query.size + 10, 2).short.toInt())
+        assertTrue(reply.takeLast(16).all { it == 0.toByte() })
+    }
+
+    @Test
+    fun `EDNS additional section is not copied into question`() {
+        val query = buildDnsQuery("example.com")
+        val extended = query + byteArrayOf(0, 0, 41, 16, 0, 0, 0, 0, 0, 0, 0)
+        extended[11] = 1
+        val reply = DnsPacketParser.buildSinkholeResponse(extended, extended.size)!!
+        assertEquals(query.size + 16, reply.size)
+        assertEquals(0, reply[11].toInt())
+    }
 }

@@ -12,13 +12,17 @@ import com.example.data.PreferencesRepository
 import com.example.data.QuickMode
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.cancel
 
 @RequiresApi(Build.VERSION_CODES.N)
 class MobileDataTileService : TileService() {
 
-    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob() + CoroutineExceptionHandler { _, _ ->
+        stateRepo.setError("Could not update firewall mode. Open NetGuardian to retry.")
+    })
     private lateinit var stateRepo: FirewallStateRepository
     private lateinit var prefsRepo: PreferencesRepository
 
@@ -26,6 +30,11 @@ class MobileDataTileService : TileService() {
         super.onCreate()
         stateRepo = FirewallStateRepository.getInstance(applicationContext)
         prefsRepo = PreferencesRepository(applicationContext)
+    }
+
+    override fun onDestroy() {
+        scope.cancel()
+        super.onDestroy()
     }
 
     override fun onStartListening() {
@@ -80,13 +89,13 @@ class MobileDataTileService : TileService() {
 
         scope.launch {
             stateRepo.setMobileDataBlocked(shouldBlock)
-            val newQuickMode = if (shouldBlock) QuickMode.MOBILE_ONLY else QuickMode.NORMAL
+            val newQuickMode = if (shouldBlock) QuickMode.WIFI_ONLY else QuickMode.NORMAL
             prefsRepo.setQuickMode(newQuickMode)
 
             val intent = Intent(applicationContext, FirewallVpnService::class.java).apply {
                 action = FirewallVpnService.ACTION_RELOAD_RULES
             }
-            applicationContext.startService(intent)
+            FirewallManager.getInstance(applicationContext).notifyRulesChanged()
 
             stateRepo.requestAllTilesRefresh()
         }

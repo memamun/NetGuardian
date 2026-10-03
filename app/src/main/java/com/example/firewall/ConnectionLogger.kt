@@ -7,6 +7,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.CancellationException
 
 open class ConnectionLogger(private val dao: FirewallDao? = null) {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -15,15 +17,24 @@ open class ConnectionLogger(private val dao: FirewallDao? = null) {
     init {
         if (dao != null) {
             scope.launch {
+                var written = 0
                 for (log in logChannel) {
                     try {
                         dao.insertLog(log)
+                        if (written++ % 100 == 0) dao.pruneLogs(System.currentTimeMillis() - 7L * 24 * 60 * 60 * 1000)
+                    } catch (e: CancellationException) {
+                        throw e
                     } catch (_: Exception) {
                         // Ignore transient write errors
                     }
                 }
             }
         }
+    }
+
+    fun close() {
+        logChannel.close()
+        scope.cancel()
     }
 
     open fun logConnection(

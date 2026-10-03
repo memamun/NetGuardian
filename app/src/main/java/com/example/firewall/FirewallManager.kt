@@ -11,6 +11,7 @@ import com.example.data.PreferencesRepository
 import com.example.data.QuickMode
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -19,7 +20,9 @@ import kotlinx.coroutines.launch
 
 class FirewallManager private constructor(private val appContext: Context) {
 
-    private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+    private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob() + CoroutineExceptionHandler { _, _ ->
+        stateRepo.setError("Could not load firewall settings. Reopen NetGuardian to retry.")
+    })
     private val prefsRepo = PreferencesRepository(appContext)
     private val stateRepo = FirewallStateRepository.getInstance(appContext)
 
@@ -48,7 +51,7 @@ class FirewallManager private constructor(private val appContext: Context) {
                 _activeQuickMode.value = prefs.activeQuickMode
                 stateRepo.setBlockAllMode(prefs.activeQuickMode == QuickMode.BLOCK_NON_SYSTEM)
                 stateRepo.setWifiOnlyMode(prefs.activeQuickMode == QuickMode.WIFI_ONLY)
-                stateRepo.setMobileDataBlocked(prefs.activeQuickMode == QuickMode.MOBILE_ONLY)
+                stateRepo.setMobileDataBlocked(prefs.activeQuickMode == QuickMode.WIFI_ONLY)
             }
         }
 
@@ -61,6 +64,7 @@ class FirewallManager private constructor(private val appContext: Context) {
 
     private fun monitorNetworkState() {
         val request = NetworkRequest.Builder()
+            .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN)
             .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
             .build()
 
@@ -123,11 +127,11 @@ class FirewallManager private constructor(private val appContext: Context) {
         _activeQuickMode.value = mode
         stateRepo.setBlockAllMode(mode == QuickMode.BLOCK_NON_SYSTEM)
         stateRepo.setWifiOnlyMode(mode == QuickMode.WIFI_ONLY)
-        stateRepo.setMobileDataBlocked(mode == QuickMode.MOBILE_ONLY)
+        stateRepo.setMobileDataBlocked(mode == QuickMode.WIFI_ONLY)
         scope.launch {
             prefsRepo.setQuickMode(mode)
+            notifyRulesChanged()
         }
-        notifyRulesChanged()
     }
 
     fun checkVpnPermission(context: Context): Intent? {
@@ -139,10 +143,16 @@ class FirewallManager private constructor(private val appContext: Context) {
         val intent = Intent(context, FirewallVpnService::class.java).apply {
             action = FirewallVpnService.ACTION_START
         }
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-            context.startForegroundService(intent)
-        } else {
-            context.startService(intent)
+        try {
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                context.startForegroundService(intent)
+            } else {
+                context.startService(intent)
+            }
+        } catch (_: IllegalStateException) {
+            stateRepo.setError("Android could not start protection. Open NetGuardian and try again.")
+        } catch (_: SecurityException) {
+            stateRepo.setVpnPermissionRequired()
         }
     }
 
@@ -150,7 +160,11 @@ class FirewallManager private constructor(private val appContext: Context) {
         val intent = Intent(context, FirewallVpnService::class.java).apply {
             action = FirewallVpnService.ACTION_STOP
         }
-        context.startService(intent)
+        try {
+            context.startService(intent)
+        } catch (_: Exception) {
+            stateRepo.setStopped()
+        }
     }
 
     fun toggleFirewall(context: Context): Intent? {
@@ -169,10 +183,15 @@ class FirewallManager private constructor(private val appContext: Context) {
     }
 
     fun notifyRulesChanged() {
+        if (stateRepo.state.value.state !in setOf(FirewallState.RUNNING, FirewallState.STARTING, FirewallState.PAUSED)) return
         val intent = Intent(appContext, FirewallVpnService::class.java).apply {
             action = FirewallVpnService.ACTION_RELOAD_RULES
         }
-        appContext.startService(intent)
+        try {
+            appContext.startService(intent)
+        } catch (_: IllegalStateException) {
+            stateRepo.setError("Open NetGuardian to apply your updated rules.")
+        }
     }
 
     companion object {

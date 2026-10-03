@@ -21,6 +21,10 @@ import com.example.dns.DnsPacketParser
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineExceptionHandler
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
@@ -31,13 +35,14 @@ import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.net.InetAddress
 import java.nio.ByteBuffer
-import com.example.dns.DnsInterceptor
 import com.example.dns.DnsResolver
-import com.example.dns.DomainMatcher
 
 class FirewallVpnService : VpnService() {
 
-    private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private val serviceErrors = CoroutineExceptionHandler { _, _ ->
+        stopVpn("Protection stopped because settings could not be loaded. Open NetGuardian and retry.")
+    }
+    private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob() + serviceErrors)
     private var vpnInterface: ParcelFileDescriptor? = null
     private var workerThread: Thread? = null
 
@@ -49,18 +54,17 @@ class FirewallVpnService : VpnService() {
     private lateinit var prefsRepo: PreferencesRepository
     private val ruleEngine = RuleEngine()
 
-    private var isRunning = false
-    private var isPaused = false
+    private val configurationMutex = Mutex()
+    private val tunnelLock = Any()
+
+    @Volatile private var isRunning = false
+    @Volatile private var isPaused = false
     private var userExplicitStop = false
     private var pauseJob: Job? = null
     private var blockedDomains = setOf<String>()
 
     // DNS engine components
     private lateinit var dnsResolver: DnsResolver
-    private val domainMatcher = DomainMatcher()
-    private lateinit var dnsInterceptor: DnsInterceptor
-    private var currentUpstreamDns: InetAddress? = null
-    private var dnsFilteringActive = false
 
     private var lastNotificationUpdateMs = 0L
 
@@ -124,7 +128,6 @@ class FirewallVpnService : VpnService() {
         // Initialize DNS engine
         val connectivityMgr = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         dnsResolver = DnsResolver(this, connectivityMgr)
-        dnsInterceptor = DnsInterceptor(domainMatcher, dnsResolver, connectionLogger)
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             val pm = getSystemService(Context.POWER_SERVICE) as? PowerManager
@@ -141,6 +144,7 @@ class FirewallVpnService : VpnService() {
         registerReceiver(systemEventReceiver, filter)
 
         val request = android.net.NetworkRequest.Builder()
+            .addCapability(android.net.NetworkCapabilities.NET_CAPABILITY_NOT_VPN)
             .addCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET)
             .build()
         connectivityMgr.registerNetworkCallback(request, networkCallback)
@@ -187,12 +191,23 @@ class FirewallVpnService : VpnService() {
     }
 
     private fun startVpn() {
-        if (isRunning) return
+        if (isRunning) {
+            if (isPaused) resumeVpn()
+            return
+        }
+
+        // Post foreground notification immediately to satisfy Android startForegroundService contract
+        startForeground(
+            FirewallNotificationManager.NOTIFICATION_ID_FOREGROUND,
+            notificationManager.buildForegroundNotification(stateRepo.state.value)
+        )
+        notificationManager.dismissAlertNotifications()
 
         // Verify VPN permission first
         val prepareIntent = VpnService.prepare(this)
         if (prepareIntent != null) {
             stateRepo.setVpnPermissionRequired()
+            stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
             return
         }
@@ -201,13 +216,6 @@ class FirewallVpnService : VpnService() {
         isRunning = true
         isPaused = false
         stateRepo.setStarting()
-
-        // Post foreground notification immediately
-        startForeground(
-            FirewallNotificationManager.NOTIFICATION_ID_FOREGROUND,
-            notificationManager.buildForegroundNotification(stateRepo.state.value)
-        )
-        notificationManager.dismissAlertNotifications()
 
         serviceScope.launch {
             prefsRepo.setFirewallEnabled(true)
@@ -218,15 +226,12 @@ class FirewallVpnService : VpnService() {
 
     private suspend fun loadBlocklists() {
         try {
-            AppDatabase.populateDefaultBlocklists(database.firewallDao())
             val list = database.firewallDao().getActiveBlocklistDomainsSync()
             blockedDomains = list.toSet()
-            // Update the domain matcher atomically — this is thread-safe
-            // and takes effect immediately for in-flight DNS queries
-            domainMatcher.updateRules(blockedDomains)
+        } catch (e: CancellationException) {
+            throw e
         } catch (_: Exception) {
-            blockedDomains = emptySet()
-            domainMatcher.updateRules(emptySet())
+            // Retain the last known rules if storage is temporarily unavailable.
         }
     }
 
@@ -236,7 +241,7 @@ class FirewallVpnService : VpnService() {
             // Actively query the real current network type — don't trust the stored value
             // which may be stale during WiFi→cellular transitions.
             val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-            val activeNetwork = cm.activeNetwork
+            val activeNetwork = getPhysicalNetwork()
             val caps = cm.getNetworkCapabilities(activeNetwork)
             val realNetworkType = if (caps != null) {
                 when {
@@ -258,6 +263,7 @@ class FirewallVpnService : VpnService() {
     private fun pauseVpn(durationMinutes: Int) {
         if (!isRunning) return
         isPaused = true
+        reconfigureVpn()
         val until = System.currentTimeMillis() + durationMinutes * 60 * 1000L
         stateRepo.setPaused(until)
         updateForegroundNotification()
@@ -281,7 +287,8 @@ class FirewallVpnService : VpnService() {
         }
     }
 
-    private suspend fun establishVpn() {
+    private suspend fun establishVpn() = configurationMutex.withLock {
+        if (!isRunning) return@withLock
         try {
             val rules = database.firewallDao().getAllRulesSync()
             val prefs = prefsRepo.userPreferencesFlow.first()
@@ -307,9 +314,6 @@ class FirewallVpnService : VpnService() {
                 UpstreamDnsType.GOOGLE -> Pair("8.8.8.8", "8.8.4.4")
             }
 
-            // Store the resolved upstream address for the DNS interceptor
-            currentUpstreamDns = try { InetAddress.getByName(primaryDns) } catch (_: Exception) { null }
-            dnsFilteringActive = prefs.dnsFilteringEnabled
 
             // Evaluate which apps are blocked
             var blockedCount = 0
@@ -347,15 +351,16 @@ class FirewallVpnService : VpnService() {
                 val oldIface = vpnInterface
                 vpnInterface = null
                 try { oldIface?.close() } catch (_: Exception) {}
-                if (!isPaused) {
+                if (isRunning && !isPaused) {
                     stateRepo.setRunning(blockedApps = 0, blockedConnections = 0, dnsEffective = false)
                 }
                 updateForegroundNotification()
-                return
+                return@withLock
             }
 
             val builder = Builder()
                 .setSession("NetGuardian")
+                .setBlocking(true)
                 .addAddress("10.1.10.1", 32)
                 .addRoute("0.0.0.0", 0)
                 .addDnsServer(primaryDns)
@@ -376,7 +381,7 @@ class FirewallVpnService : VpnService() {
                     try {
                         builder.excludeRoute(IpPrefix(InetAddress.getByName(ip), prefix))
                     } catch (e: Exception) {
-                        Log.d(TAG, "excludeRoute for $ip/$prefix ignored: ${e.message}")
+                        // Unsupported exclusions remain routed through the sinkhole.
                     }
                 }
 
@@ -403,27 +408,41 @@ class FirewallVpnService : VpnService() {
 
             // Route ONLY blocked apps through the sinkhole VPN.
             // Non-blocked apps bypass the VPN entirely and have normal connectivity.
+            var routedPackages = 0
             for (pkg in blockedPackages) {
                 try {
                     builder.addAllowedApplication(pkg)
+                    routedPackages++
                 } catch (e: PackageManager.NameNotFoundException) {
                     // Package was uninstalled
                 }
             }
 
-            val oldInterface = vpnInterface
-            val newInterface = builder.establish()
+            // An empty allow-list routes EVERY application into the sinkhole.
+            if (routedPackages == 0) {
+                synchronized(tunnelLock) {
+                    vpnInterface?.close()
+                    vpnInterface = null
+                }
+                if (isRunning && !isPaused) stateRepo.setRunning(blockedApps = 0, dnsEffective = false)
+                return@withLock
+            }
+            val newInterface = synchronized(tunnelLock) {
+                if (!isRunning || isPaused) return@withLock
+                builder.establish()?.also { newTunnel ->
+                    val oldInterface = vpnInterface
+                    vpnInterface = newTunnel
+                    try { oldInterface?.close() } catch (_: Exception) {}
+                }
+            }
 
             if (newInterface == null) {
                 Log.e(TAG, "VPN establish returned null. Lockdown mode or conflicting VPN active.")
-                stateRepo.setError("Cannot establish VPN tunnel. Ensure no other VPN is in lockdown mode.")
                 notificationManager.showFirewallErrorAlert("Cannot establish VPN tunnel. Another VPN may be active.")
-                stopVpn()
-                return
+                stopVpn("Cannot start protection. Check VPN permission and other VPN apps, then retry.")
+                return@withLock
             }
 
-            vpnInterface = newInterface
-            oldInterface?.close()
 
             // Update underlying networks so protected sockets can route directly over physical Wi-Fi/Cellular
             updateUnderlyingNetworks()
@@ -441,37 +460,38 @@ class FirewallVpnService : VpnService() {
                 0
             }
 
-            if (!isPaused) {
+            if (isRunning && !isPaused) {
                 stateRepo.setRunning(
-                    blockedApps = blockedCount,
+                    blockedApps = routedPackages,
                     blockedConnections = totalConns,
-                    dnsEffective = prefs.dnsFilteringEnabled
+                    dnsEffective = false // Allowed apps bypass this sinkhole; global DNS protection is not provided.
                 )
             }
             updateForegroundNotification()
 
             startPacketProcessor()
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
-            Log.e(TAG, "Error establishing VPN", e)
-            stateRepo.setError("Firewall startup error: ${e.localizedMessage ?: "Unknown error"}")
-            notificationManager.showFirewallErrorAlert("Failed to start firewall: ${e.localizedMessage}")
-            stopVpn()
+            notificationManager.showFirewallErrorAlert("Could not start protection. Check your settings and try again.")
+            stopVpn("Could not start protection. Check your settings and try again.")
         }
     }
 
     private fun startPacketProcessor() {
         workerThread?.interrupt()
+        if (!isRunning) return
         val pfd = vpnInterface ?: return
 
         workerThread = Thread({
-            val inStream = FileInputStream(pfd.fileDescriptor)
-            val outStream = FileOutputStream(pfd.fileDescriptor)
-            val buffer = ByteArray(32767)
-
             try {
+                val inStream = FileInputStream(pfd.fileDescriptor)
+                val outStream = FileOutputStream(pfd.fileDescriptor)
+                val buffer = ByteArray(32767)
                 while (!Thread.currentThread().isInterrupted && isRunning) {
                     val length = inStream.read(buffer)
-                    if (length <= 0) continue
+                    if (length < 0) break
+                    if (length == 0) continue
 
                     if (isPaused) {
                         // In paused state, let all traffic pass through unfiltered
@@ -486,63 +506,33 @@ class FirewallVpnService : VpnService() {
                         if (protocol == 17) {
                             // UDP packet (Protocol 17) - often DNS (port 53)
                             val ipHeaderLen = (buffer[0].toInt() and 0x0F) * 4
-                            if (length >= ipHeaderLen + 8) {
+                            if (ipHeaderLen >= 20 && length >= ipHeaderLen + 8) {
                                 val destPort = ByteBuffer.wrap(buffer, ipHeaderLen + 2, 2).short.toInt() and 0xFFFF
                                 if (destPort == 53 && length > ipHeaderLen + 8) {
                                     val dnsPayload = buffer.copyOfRange(ipHeaderLen + 8, length)
                                     val queryDomain = com.example.dns.DnsPacketParser.parseDomainName(dnsPayload, 0, dnsPayload.size)
 
                                     if (queryDomain != null) {
-                                        // Use the DNS interceptor for filtering + resolution
-                                        val upstream = currentUpstreamDns
-                                        if (dnsFilteringActive && upstream != null) {
-                                            // DNS engine path: filter, then forward or sinkhole
-                                            val packetCopy = dnsPayload.copyOf()
-                                            val upstreamCopy = upstream
-                                            serviceScope.launch {
-                                                try {
-                                                    val result = dnsInterceptor.intercept(
-                                                        dnsQueryPayload = packetCopy,
-                                                        upstreamAddress = upstreamCopy,
-                                                        sourcePackageName = "Blocked App",
-                                                        sourceAppName = "Firewall Sinkhole"
-                                                    )
-                                                    val responsePayload = result.response
-                                                    if (responsePayload != null) {
-                                                        synchronized(outStream) {
-                                                            val replyPacket = buildDnsReplyPacket(buffer.copyOf(length), ipHeaderLen, responsePayload)
-                                                            try {
-                                                                outStream.write(replyPacket)
-                                                            } catch (_: Exception) {}
-                                                        }
-                                                    }
-                                                    throttledNotificationUpdate()
-                                                } catch (e: Exception) {
-                                                    Log.w(TAG, "DNS intercept error for $queryDomain", e)
-                                                }
-                                            }
-                                        } else {
-                                            // Legacy sinkhole path: block everything from blocked apps
-                                            val responsePayload = com.example.dns.DnsPacketParser.buildSinkholeResponse(dnsPayload, dnsPayload.size)
-                                            if (responsePayload != null) {
-                                                val replyPacket = buildDnsReplyPacket(buffer, ipHeaderLen, responsePayload)
-                                                try {
-                                                    outStream.write(replyPacket)
-                                                } catch (_: Exception) {}
-                                            }
-
-                                            connectionLogger.logConnection(
-                                                packageName = "Blocked App DNS",
-                                                appName = "Firewall Sinkhole",
-                                                destinationHost = queryDomain,
-                                                port = 53,
-                                                protocol = "DNS",
-                                                isBlocked = true,
-                                                blockReason = "App Blocked",
-                                                bytes = length.toLong()
-                                            )
-                                            throttledNotificationUpdate()
+                                        // A blocked app must not send DNS traffic to an external resolver.
+                                        val responsePayload = com.example.dns.DnsPacketParser.buildSinkholeResponse(dnsPayload, dnsPayload.size)
+                                        if (responsePayload != null) {
+                                            val replyPacket = buildDnsReplyPacket(buffer, ipHeaderLen, responsePayload)
+                                            try {
+                                                outStream.write(replyPacket)
+                                            } catch (_: Exception) {}
                                         }
+
+                                        connectionLogger.logConnection(
+                                            packageName = "Blocked App DNS",
+                                            appName = "Firewall Sinkhole",
+                                            destinationHost = queryDomain,
+                                            port = 53,
+                                            protocol = "DNS",
+                                            isBlocked = true,
+                                            blockReason = "App Blocked",
+                                            bytes = length.toLong()
+                                        )
+                                        throttledNotificationUpdate()
                                     }
                                 }
                             }
@@ -569,7 +559,9 @@ class FirewallVpnService : VpnService() {
                     }
                 }
             } catch (_: Exception) {
-                // Thread terminated
+                if (isRunning && vpnInterface === pfd) {
+                    stopVpn("Protection stopped unexpectedly. Open NetGuardian to restart it.")
+                }
             }
         }, "NetGuardian-PacketProcessor").apply {
             start()
@@ -669,9 +661,9 @@ class FirewallVpnService : VpnService() {
         nm.notify(FirewallNotificationManager.NOTIFICATION_ID_FOREGROUND, notification)
     }
 
-    private fun stopVpn() {
+    private fun stopVpn(errorMessage: String? = null) {
         userExplicitStop = true
-        isRunning = false
+        synchronized(tunnelLock) { isRunning = false }
         isPaused = false
         pauseJob?.cancel()
         pauseJob = null
@@ -684,14 +676,25 @@ class FirewallVpnService : VpnService() {
         } catch (_: Exception) {}
         vpnInterface = null
 
-        stateRepo.setStopped()
-
-        serviceScope.launch {
-            prefsRepo.setFirewallEnabled(false)
-        }
+        stateRepo.setStopped(errorMessage)
 
         stopForeground(STOP_FOREGROUND_REMOVE)
-        stopSelf()
+        serviceScope.launch {
+            try {
+                prefsRepo.setFirewallEnabled(false)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                // Teardown still must complete when storage is full.
+            } finally {
+                if (!isRunning) stopSelf()
+            }
+        }
+    }
+
+    override fun onRevoke() {
+        stopVpn("VPN permission was revoked. Open NetGuardian to restore protection.")
+        super.onRevoke()
     }
 
     override fun onDestroy() {
@@ -717,6 +720,7 @@ class FirewallVpnService : VpnService() {
             stateRepo.setError("Firewall VPN was terminated unexpectedly")
         }
 
+        connectionLogger.close()
         serviceScope.cancel()
         super.onDestroy()
     }

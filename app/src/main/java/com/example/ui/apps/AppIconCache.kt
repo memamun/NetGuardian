@@ -36,10 +36,13 @@ object AppIconCache {
 
     private fun drawableToBitmap(drawable: Drawable): Bitmap? {
         if (drawable is BitmapDrawable && drawable.bitmap != null) {
-            return drawable.bitmap
+            val b = drawable.bitmap
+            if (b.width <= 192 && b.height <= 192) return b
         }
-        val width = if (drawable.intrinsicWidth > 0) drawable.intrinsicWidth else 72
-        val height = if (drawable.intrinsicHeight > 0) drawable.intrinsicHeight else 72
+        val rawWidth = if (drawable.intrinsicWidth > 0) drawable.intrinsicWidth else 72
+        val rawHeight = if (drawable.intrinsicHeight > 0) drawable.intrinsicHeight else 72
+        val width = minOf(rawWidth, 192)
+        val height = minOf(rawHeight, 192)
         return try {
             val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
             val canvas = Canvas(bitmap)

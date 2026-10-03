@@ -106,12 +106,12 @@ fun PrivacyScreen(
     val isMalwareEnabled = remember(malwareDomains) { malwareDomains.any { it.isEnabled } }
 
     // Derive truthful DNS status from both the preference AND the running firewall state
-    val dnsStatusResId = remember(prefs.dnsFilteringEnabled, snapshot.state) {
+    val dnsStatusResId = remember(prefs.dnsFilteringEnabled, snapshot.state, snapshot.dnsProtectionEffective) {
         if (!prefs.dnsFilteringEnabled) {
             R.string.dns_status_disabled
         } else {
             when (snapshot.state) {
-                FirewallState.RUNNING -> R.string.dns_status_active
+                FirewallState.RUNNING -> if (snapshot.dnsProtectionEffective) R.string.dns_status_active else R.string.dns_status_limited
                 FirewallState.STARTING -> R.string.dns_status_starting
                 FirewallState.PAUSED -> R.string.dns_status_paused
                 FirewallState.ERROR -> R.string.dns_status_error
@@ -119,7 +119,7 @@ fun PrivacyScreen(
             }
         }
     }
-    val isDnsEffective = prefs.dnsFilteringEnabled && snapshot.state == FirewallState.RUNNING
+    val isDnsEffective = prefs.dnsFilteringEnabled && snapshot.state == FirewallState.RUNNING && snapshot.dnsProtectionEffective
 
     LazyColumn(
         modifier = modifier
@@ -331,7 +331,7 @@ fun PrivacyScreen(
                             singleLine = true,
                             isError = domainError != null,
                             supportingText = if (domainError != null) {
-                                { Text(domainError!!, color = MaterialTheme.colorScheme.error) }
+                                { Text(domainError.orEmpty(), color = MaterialTheme.colorScheme.error) }
                             } else null,
                             shape = M3ShapesTokens.CornerSmall,
                             modifier = Modifier.weight(1f),

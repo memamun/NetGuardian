@@ -1,5 +1,8 @@
 package com.example.ui.theme
 
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
@@ -11,9 +14,18 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
+
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
+}
 
 @Immutable
 data class NetGuardianColors(
@@ -192,6 +204,20 @@ fun NetGuardianTheme(
     }
 
     val netGuardianColors = if (darkTheme) DarkNetGuardianColors else LightNetGuardianColors
+
+    val view = LocalView.current
+    if (!view.isInEditMode) {
+        SideEffect {
+            try {
+                val window = view.context.findActivity()?.window
+                if (window != null) {
+                    val insetsController = WindowCompat.getInsetsController(window, view)
+                    insetsController.isAppearanceLightStatusBars = !darkTheme
+                    insetsController.isAppearanceLightNavigationBars = !darkTheme
+                }
+            } catch (_: Exception) {}
+        }
+    }
 
     CompositionLocalProvider(
         LocalNetGuardianColors provides netGuardianColors,

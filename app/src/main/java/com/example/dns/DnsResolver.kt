@@ -2,8 +2,8 @@ package com.example.dns
 
 import android.net.ConnectivityManager
 import android.net.VpnService
-import android.util.Log
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import java.io.IOException
@@ -75,18 +75,14 @@ open class DnsResolver(
                 val linkProps = cm.getLinkProperties(network)
                 val servers = linkProps?.dnsServers
                 if (!servers.isNullOrEmpty()) {
-                    Log.d(TAG, "Discovered system DNS from physical network: ${servers.map { it.hostAddress }}")
                     servers
                 } else {
-                    Log.w(TAG, "No DNS servers in LinkProperties, using fallback")
                     FALLBACK_DNS
                 }
             } else {
-                Log.w(TAG, "No physical network found, using fallback DNS")
                 FALLBACK_DNS
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error discovering system DNS", e)
             FALLBACK_DNS
         }
     }
@@ -111,11 +107,9 @@ open class DnsResolver(
         } else {
             val udpResponse = resolveUdp(queryPayload, upstream, port)
             if (udpResponse != null && isTruncated(udpResponse)) {
-                Log.d(TAG, "UDP response truncated, retrying over TCP")
                 resolveTcp(queryPayload, upstream, port) ?: udpResponse
             } else if (udpResponse == null) {
                 // Try TCP fallback if UDP timed out (many networks block or degrade UDP 53)
-                Log.d(TAG, "UDP resolve timed out for ${upstream.hostAddress}, retrying over TCP")
                 val tcpResponse = resolveTcp(queryPayload, upstream, port)
                 if (tcpResponse != null) {
                     tcpResponse
@@ -124,7 +118,6 @@ open class DnsResolver(
                     val systemDnsList = discoverSystemDns()
                     val fallback = systemDnsList.firstOrNull { it != upstream }
                     if (fallback != null) {
-                        Log.w(TAG, "Upstream ${upstream.hostAddress} failed, falling back to system DNS ${fallback.hostAddress}")
                         resolveUdp(queryPayload, fallback, port) ?: resolveTcp(queryPayload, fallback, port)
                     } else {
                         null
@@ -153,15 +146,14 @@ open class DnsResolver(
                     try {
                         physNet.bindSocket(socket)
                     } catch (e: Exception) {
-                        Log.w(TAG, "Failed to bind UDP socket to physical network: ${e.message}")
                     }
                 }
 
                 // 2. Protect socket so it doesn't route through our VPN tunnel
-                val isProtected = vpnService?.protect(socket) ?: false
-                Log.d(TAG, "UDP socket protected: $isProtected for upstream ${upstream.hostAddress}")
+                if (vpnService != null && !vpnService.protect(socket)) return@withTimeoutOrNull null
 
                 val requestPacket = DatagramPacket(queryPayload, queryPayload.size, upstream, port)
+                socket.connect(upstream, port)
                 socket.soTimeout = UDP_TIMEOUT_MS
                 socket.send(requestPacket)
 
@@ -169,16 +161,15 @@ open class DnsResolver(
                 val responsePacket = DatagramPacket(responseBuffer, responseBuffer.size)
                 socket.receive(responsePacket)
 
-                Log.d(TAG, "UDP resolve SUCCESS for ${upstream.hostAddress}: ${responsePacket.length} bytes")
                 responseBuffer.copyOf(responsePacket.length)
             } finally {
                 socket.close()
             }
         } catch (e: IOException) {
-            Log.w(TAG, "UDP resolve failed for ${upstream.hostAddress}: ${e.message}")
             null
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
-            Log.e(TAG, "Unexpected error in UDP resolve", e)
             null
         }
     }
@@ -200,13 +191,11 @@ open class DnsResolver(
                     try {
                         physNet.bindSocket(socket)
                     } catch (e: Exception) {
-                        Log.w(TAG, "Failed to bind TCP socket to physical network: ${e.message}")
                     }
                 }
 
                 // 2. Protect socket so it doesn't route through our VPN tunnel
-                val isProtected = vpnService?.protect(socket) ?: false
-                Log.d(TAG, "TCP socket protected: $isProtected for upstream ${upstream.hostAddress}")
+                if (vpnService != null && !vpnService.protect(socket)) return@withTimeoutOrNull null
 
                 socket.soTimeout = TCP_TIMEOUT_MS
                 socket.connect(InetSocketAddress(upstream, port), TCP_TIMEOUT_MS)
@@ -230,7 +219,6 @@ open class DnsResolver(
                 }
                 val responseLen = ByteBuffer.wrap(lenBuf).short.toInt() and 0xFFFF
                 if (responseLen > MAX_DNS_PACKET_SIZE || responseLen < 12) {
-                    Log.w(TAG, "TCP DNS response has invalid length: $responseLen")
                     return@withTimeoutOrNull null
                 }
 
@@ -248,10 +236,10 @@ open class DnsResolver(
                 try { socket.close() } catch (_: Exception) {}
             }
         } catch (e: IOException) {
-            Log.w(TAG, "TCP resolve failed for ${upstream.hostAddress}: ${e.message}")
             null
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
-            Log.e(TAG, "Unexpected error in TCP resolve", e)
             null
         }
     }

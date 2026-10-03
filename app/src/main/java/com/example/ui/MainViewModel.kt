@@ -19,6 +19,9 @@ import com.example.database.ConnectionLogEntity
 import com.example.firewall.FirewallManager
 import com.example.firewall.NetworkType
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineExceptionHandler
+import kotlinx.coroutines.CancellationException
+import androidx.room.withTransaction
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -54,6 +57,15 @@ sealed interface RootNavState {
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
+    private val _operationError = MutableStateFlow<String?>(null)
+    val operationError: StateFlow<String?> = _operationError.asStateFlow()
+    fun dismissOperationError() { _operationError.value = null }
+    private val storageErrors = CoroutineExceptionHandler { _, _ ->
+        isAppsLoading.value = false
+        _operationError.value = "Could not read or save your settings. Free some device storage and reopen NetGuardian to retry."
+        if (_rootNavState.value == RootNavState.Loading) _rootNavState.value = RootNavState.Onboarding
+    }
+
     private val db = AppDatabase.getDatabase(application)
     private val dao = db.firewallDao()
     private val appRepo = AppRepository(application)
@@ -78,14 +90,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val rootNavState: StateFlow<RootNavState> = _rootNavState.asStateFlow()
 
     init {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(Dispatchers.IO + storageErrors) {
             try {
                 if (dao.getAllBlocklistSync().isEmpty()) {
                     AppDatabase.populateDefaultBlocklists(dao)
                 }
             } catch (_: Exception) {}
         }
-        viewModelScope.launch {
+        viewModelScope.launch(storageErrors) {
             prefsRepo.userPreferencesFlow.collect { prefs ->
                 if (_rootNavState.value != RootNavState.MainApp) {
                     _rootNavState.value = if (prefs.onboardingCompleted) {
@@ -100,7 +112,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     val userPreferences: StateFlow<UserPreferences> = prefsRepo.userPreferencesFlow
         .stateIn(
-            scope = viewModelScope,
+            scope = kotlinx.coroutines.CoroutineScope(viewModelScope.coroutineContext + storageErrors),
             started = SharingStarted.Eagerly,
             initialValue = UserPreferences(
                 onboardingCompleted = prefsRepo.isOnboardingCompletedSync()
@@ -113,7 +125,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val installedApps: StateFlow<List<AppItem>> = appRepo.appsFlow
         .onEach { isAppsLoading.value = false }
         .stateIn(
-            scope = viewModelScope,
+            scope = kotlinx.coroutines.CoroutineScope(viewModelScope.coroutineContext + storageErrors),
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = emptyList()
         )
@@ -142,31 +154,31 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             matchesQuery && matchesFilter
         }
     }.stateIn(
-        scope = viewModelScope,
+        scope = kotlinx.coroutines.CoroutineScope(viewModelScope.coroutineContext + storageErrors),
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = emptyList()
     )
 
     val blockedAppsCount: StateFlow<Int> = installedApps.combine(MutableStateFlow(0)) { apps, _ ->
         apps.count { it.rule.isBlocked || it.rule.blockWifi || it.rule.blockMobile }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+    }.stateIn(kotlinx.coroutines.CoroutineScope(viewModelScope.coroutineContext + storageErrors), SharingStarted.WhileSubscribed(5000), 0)
 
     val allowedAppsCount: StateFlow<Int> = installedApps.combine(MutableStateFlow(0)) { apps, _ ->
         apps.count { !it.rule.isBlocked && !it.rule.blockWifi && !it.rule.blockMobile }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+    }.stateIn(kotlinx.coroutines.CoroutineScope(viewModelScope.coroutineContext + storageErrors), SharingStarted.WhileSubscribed(5000), 0)
 
     // Connection Logs
     val logFilter = MutableStateFlow(LogFilter.ALL)
     val logSearchQuery = MutableStateFlow("")
 
     val recentLogs: StateFlow<List<ConnectionLogEntity>> = dao.getRecentLogs(200).stateIn(
-        scope = viewModelScope,
+        scope = kotlinx.coroutines.CoroutineScope(viewModelScope.coroutineContext + storageErrors),
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = emptyList()
     )
 
     val recentLogsPreview: StateFlow<List<ConnectionLogEntity>> = dao.getRecentLogs(4).stateIn(
-        scope = viewModelScope,
+        scope = kotlinx.coroutines.CoroutineScope(viewModelScope.coroutineContext + storageErrors),
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = emptyList()
     )
@@ -190,14 +202,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             matchesFilter && matchesQuery
         }
     }.stateIn(
-        scope = viewModelScope,
+        scope = kotlinx.coroutines.CoroutineScope(viewModelScope.coroutineContext + storageErrors),
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = emptyList()
     )
 
     // Privacy Blocklists
     val blocklist: StateFlow<List<BlocklistEntity>> = dao.getAllBlocklist().stateIn(
-        scope = viewModelScope,
+        scope = kotlinx.coroutines.CoroutineScope(viewModelScope.coroutineContext + storageErrors),
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = emptyList()
     )
@@ -214,19 +226,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
 
     val todayBlockedCount: StateFlow<Int> = dao.getTodayBlockedCount(startOfDayMillis).stateIn(
-        scope = viewModelScope,
+        scope = kotlinx.coroutines.CoroutineScope(viewModelScope.coroutineContext + storageErrors),
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = 0
     )
 
     val todayAllowedCount: StateFlow<Int> = dao.getTodayAllowedCount(startOfDayMillis).stateIn(
-        scope = viewModelScope,
+        scope = kotlinx.coroutines.CoroutineScope(viewModelScope.coroutineContext + storageErrors),
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = 0
     )
 
     val topBlockedApps: StateFlow<List<AppBlockedStat>> = dao.getTopBlockedApps(5).stateIn(
-        scope = viewModelScope,
+        scope = kotlinx.coroutines.CoroutineScope(viewModelScope.coroutineContext + storageErrors),
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = emptyList()
     )
@@ -249,112 +261,112 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun updateAppRule(rule: AppRuleEntity) {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(Dispatchers.IO + storageErrors) {
             appRepo.updateRule(rule)
             firewallManager.notifyRulesChanged()
         }
     }
 
     fun toggleAppBlock(rule: AppRuleEntity) {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(Dispatchers.IO + storageErrors) {
             appRepo.toggleBlock(rule)
             firewallManager.notifyRulesChanged()
         }
     }
 
     fun toggleAppWifi(rule: AppRuleEntity) {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(Dispatchers.IO + storageErrors) {
             appRepo.toggleWifi(rule)
             firewallManager.notifyRulesChanged()
         }
     }
 
     fun toggleAppMobile(rule: AppRuleEntity) {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(Dispatchers.IO + storageErrors) {
             appRepo.toggleMobile(rule)
             firewallManager.notifyRulesChanged()
         }
     }
 
     fun toggleAppBackground(rule: AppRuleEntity) {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(Dispatchers.IO + storageErrors) {
             appRepo.toggleBackground(rule)
             firewallManager.notifyRulesChanged()
         }
     }
 
     fun toggleAppScreenOff(rule: AppRuleEntity) {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(Dispatchers.IO + storageErrors) {
             appRepo.toggleScreenOff(rule)
             firewallManager.notifyRulesChanged()
         }
     }
 
     fun toggleAppDeviceIdle(rule: AppRuleEntity) {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(Dispatchers.IO + storageErrors) {
             appRepo.toggleDeviceIdle(rule)
             firewallManager.notifyRulesChanged()
         }
     }
 
     fun toggleAppTrackers(rule: AppRuleEntity) {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(Dispatchers.IO + storageErrors) {
             appRepo.toggleTrackers(rule)
             firewallManager.notifyRulesChanged()
         }
     }
 
     fun blockAllNonSystem(block: Boolean) {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(Dispatchers.IO + storageErrors) {
             appRepo.blockAllNonSystem(block)
             firewallManager.notifyRulesChanged()
         }
     }
 
     fun allowAllApps() {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(Dispatchers.IO + storageErrors) {
             appRepo.allowAllApps()
             firewallManager.notifyRulesChanged()
         }
     }
 
     fun setBlockAllBackground(block: Boolean) {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(Dispatchers.IO + storageErrors) {
             appRepo.setBlockAllBackground(block)
             firewallManager.notifyRulesChanged()
         }
     }
 
     fun setBlockAllScreenOff(block: Boolean) {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(Dispatchers.IO + storageErrors) {
             appRepo.setBlockAllScreenOff(block)
             firewallManager.notifyRulesChanged()
         }
     }
 
     fun setBlockAllDeviceIdle(block: Boolean) {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(Dispatchers.IO + storageErrors) {
             appRepo.setBlockAllDeviceIdle(block)
             firewallManager.notifyRulesChanged()
         }
     }
 
     fun setUpstreamDnsType(type: UpstreamDnsType) {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(Dispatchers.IO + storageErrors) {
             prefsRepo.setUpstreamDnsType(type)
             firewallManager.notifyRulesChanged()
         }
     }
 
     fun setCustomDnsIp(ip: String) {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(Dispatchers.IO + storageErrors) {
             prefsRepo.setCustomDnsIp(ip)
             firewallManager.notifyRulesChanged()
         }
     }
 
     fun clearLogs() {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(Dispatchers.IO + storageErrors) {
             dao.clearAllLogs()
         }
     }
@@ -375,7 +387,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
             is com.example.dns.DomainValidator.ValidationResult.Valid -> {
                 _domainValidationError.value = null
-                viewModelScope.launch(Dispatchers.IO) {
+                viewModelScope.launch(Dispatchers.IO + storageErrors) {
                     dao.insertBlocklist(
                         BlocklistEntity(
                             domain = result.normalizedDomain,
@@ -390,53 +402,55 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun toggleBlocklistItem(id: Long, isEnabled: Boolean) {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(Dispatchers.IO + storageErrors) {
             dao.toggleBlocklistItem(id, isEnabled)
             firewallManager.notifyRulesChanged()
         }
     }
 
     fun deleteBlocklistItem(id: Long) {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(Dispatchers.IO + storageErrors) {
             dao.deleteBlocklistItem(id)
             firewallManager.notifyRulesChanged()
         }
     }
 
     fun toggleCategory(category: String, isEnabled: Boolean) {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(Dispatchers.IO + storageErrors) {
             dao.toggleCategory(category, isEnabled)
             firewallManager.notifyRulesChanged()
         }
     }
 
     fun setStartOnBoot(enabled: Boolean) {
-        viewModelScope.launch(Dispatchers.IO) { prefsRepo.setStartOnBoot(enabled) }
+        viewModelScope.launch(Dispatchers.IO + storageErrors) { prefsRepo.setStartOnBoot(enabled) }
     }
 
     fun setPersistentNotification(enabled: Boolean) {
-        viewModelScope.launch(Dispatchers.IO) { prefsRepo.setPersistentNotification(enabled) }
+        viewModelScope.launch(Dispatchers.IO + storageErrors) { prefsRepo.setPersistentNotification(enabled) }
     }
 
     fun setBlockNewApps(enabled: Boolean) {
-        viewModelScope.launch(Dispatchers.IO) { prefsRepo.setBlockNewAppsByDefault(enabled) }
+        viewModelScope.launch(Dispatchers.IO + storageErrors) { prefsRepo.setBlockNewAppsByDefault(enabled) }
     }
 
     fun setDnsFiltering(enabled: Boolean) {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(Dispatchers.IO + storageErrors) {
             prefsRepo.setDnsFilteringEnabled(enabled)
             firewallManager.notifyRulesChanged()
         }
     }
 
     fun setThemeMode(mode: String) {
-        viewModelScope.launch(Dispatchers.IO) { prefsRepo.setThemeMode(mode) }
+        viewModelScope.launch(Dispatchers.IO + storageErrors) { prefsRepo.setThemeMode(mode) }
     }
 
     fun resetRulesToDefault() {
-        viewModelScope.launch(Dispatchers.IO) {
-            dao.clearAllRules()
-            dao.clearCustomBlocklist()
+        viewModelScope.launch(Dispatchers.IO + storageErrors) {
+            db.withTransaction {
+                dao.resetAllRulesToAllow()
+                dao.clearCustomBlocklist()
+            }
             prefsRepo.setQuickMode(QuickMode.NORMAL)
             firewallManager.notifyRulesChanged()
         }
@@ -470,15 +484,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     suspend fun importRulesJson(jsonStr: String): Boolean = withContext(Dispatchers.IO) {
         try {
+            if (jsonStr.length > 1_000_000) return@withContext false
             val root = JSONObject(jsonStr)
+            if (root.optString("app") != "NetGuardian" || root.optInt("version") !in 1..2) return@withContext false
             val array = root.getJSONArray("rules")
+            if (array.length() > 10000) return@withContext false
             val list = mutableListOf<AppRuleEntity>()
+            val seen = mutableSetOf<String>()
             for (i in 0 until array.length()) {
                 val obj = array.getJSONObject(i)
+                val packageName = obj.getString("packageName")
+                if (packageName.length > 255 || !packageName.matches(Regex("[A-Za-z0-9_]+(\\.[A-Za-z0-9_]+)*")) || !seen.add(packageName)) return@withContext false
+                val existing = dao.getRuleSync(packageName) ?: continue
                 list.add(
-                    AppRuleEntity(
-                        packageName = obj.getString("packageName"),
-                        appName = obj.optString("appName", "App"),
+                    existing.copy(
                         isBlocked = obj.optBoolean("isBlocked", false),
                         blockWifi = obj.optBoolean("blockWifi", false),
                         blockMobile = obj.optBoolean("blockMobile", false),
@@ -494,6 +513,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 firewallManager.notifyRulesChanged()
                 true
             } else false
+        } catch (e: CancellationException) {
+            throw e
         } catch (_: Exception) {
             false
         }
@@ -504,7 +525,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val systemDiagnostics: StateFlow<List<com.example.data.DiagnosticCheck>> = _systemDiagnostics.asStateFlow()
 
     fun runDiagnostics(context: Context) {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(Dispatchers.IO + storageErrors) {
             val isDbAccessible = try {
                 dao.getAllBlocklistSync()
                 true
@@ -522,7 +543,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun completeOnboarding(policy: String = "ALLOW_ALL") {
         _rootNavState.value = RootNavState.MainApp
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(Dispatchers.IO + storageErrors) {
             prefsRepo.setOnboardingCompleted(true)
             prefsRepo.setDefaultRulePolicy(policy)
             if (policy == "BLOCK_NEW") {
@@ -538,19 +559,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         if (completed) {
             _rootNavState.value = RootNavState.MainApp
         }
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(Dispatchers.IO + storageErrors) {
             prefsRepo.setOnboardingCompleted(completed)
         }
     }
 
     fun setHasSeenAppManagerExplanation(seen: Boolean) {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(Dispatchers.IO + storageErrors) {
             prefsRepo.setHasSeenAppManagerExplanation(seen)
         }
     }
 
     fun setHasConfirmedFirewallStartup(confirmed: Boolean) {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(Dispatchers.IO + storageErrors) {
             prefsRepo.setHasConfirmedFirewallStartup(confirmed)
         }
     }

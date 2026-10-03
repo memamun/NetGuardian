@@ -4,6 +4,8 @@ import androidx.compose.ui.res.stringResource
 import com.example.R
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -77,7 +79,7 @@ fun FirewallStartupSafetyDialog(
             }
         },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(AppSpacing.medium)) {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(AppSpacing.medium)) {
                 Text(
                     text = stringResource(R.string.ui_android_will_route_network_traffic_through_netguardian),
                     style = MaterialTheme.typography.bodyMedium,
@@ -171,7 +173,10 @@ fun FirewallStartupFailureDialog(
             }
         },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
                 Text(
                     text = stringResource(R.string.ui_could_not_activate_the_local_firewall_vpn),
                     style = MaterialTheme.typography.bodyMedium,

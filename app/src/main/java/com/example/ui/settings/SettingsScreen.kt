@@ -338,8 +338,14 @@ fun SettingsScreen(
                         onClick = {
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                             scope.launch {
-                                exportJsonString = viewModel.exportRulesJson()
-                                showExportDialog = true
+                                try {
+                                    exportJsonString = viewModel.exportRulesJson()
+                                    showExportDialog = true
+                                } catch (e: kotlinx.coroutines.CancellationException) {
+                                    throw e
+                                } catch (_: Exception) {
+                                    Toast.makeText(context, "Could not export rules. Check device storage and retry.", Toast.LENGTH_LONG).show()
+                                }
                             }
                         },
                         modifier = Modifier.weight(1f),

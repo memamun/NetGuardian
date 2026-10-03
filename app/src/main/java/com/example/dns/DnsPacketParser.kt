@@ -2,66 +2,55 @@ package com.example.dns
 
 import java.nio.ByteBuffer
 
+/** Defensive parsing for one uncompressed DNS question. Unsupported packets are rejected. */
 object DnsPacketParser {
+    private data class Question(val domain: String, val end: Int, val type: Int, val recordClass: Int)
 
-    /**
-     * Parses the QNAME (queried domain name) from a raw DNS UDP payload.
-     * Returns the domain string (e.g. "adservice.google.com") or null if invalid.
-     */
-    fun parseDomainName(dnsPayload: ByteArray, offset: Int = 0, length: Int = dnsPayload.size): String? {
-        if (length < 12) return null
-        val buffer = ByteBuffer.wrap(dnsPayload, offset, length)
-        buffer.position(12) // Skip 12-byte DNS header
-
-        val domainParts = StringBuilder()
-        while (buffer.hasRemaining()) {
-            val labelLength = buffer.get().toInt() and 0xFF
-            if (labelLength == 0) break // End of domain
-            if (labelLength > 63 || !buffer.hasRemaining() || buffer.remaining() < labelLength) return null
-
-            if (domainParts.isNotEmpty()) {
-                domainParts.append('.')
+    private fun question(bytes: ByteArray, offset: Int, length: Int): Question? {
+        if (offset < 0 || length < 12 || offset > bytes.size || length > bytes.size - offset) return null
+        val end = offset + length
+        fun u16(index: Int) = ((bytes[index].toInt() and 255) shl 8) or (bytes[index + 1].toInt() and 255)
+        if (u16(offset + 4) != 1 || bytes[offset + 2].toInt() and 0xF8 != 0) return null
+        var cursor = offset + 12
+        val labels = mutableListOf<String>()
+        while (cursor < end) {
+            val size = bytes[cursor++].toInt() and 255
+            if (size == 0) {
+                if (labels.isEmpty() || end - cursor < 4 || cursor - offset - 12 > 255) return null
+                return Question(labels.joinToString("."), cursor + 4, u16(cursor), u16(cursor + 2))
             }
-            val labelBytes = ByteArray(labelLength)
-            buffer.get(labelBytes)
-            domainParts.append(String(labelBytes, Charsets.US_ASCII))
+            if (size > 63 || size > end - cursor) return null
+            val label = bytes.copyOfRange(cursor, cursor + size)
+            if (label.any { (it.toInt() and 255) !in 33..126 || it == '.'.code.toByte() }) return null
+            labels += String(label, Charsets.US_ASCII)
+            cursor += size
         }
-        return if (domainParts.isNotEmpty()) domainParts.toString() else null
+        return null
     }
 
-    /**
-     * Builds a synthetic DNS Response packet returning 0.0.0.0 (Sinkhole/Block) for the given query.
-     */
+    fun parseDomainName(dnsPayload: ByteArray, offset: Int = 0, length: Int = dnsPayload.size): String? =
+        question(dnsPayload, offset, length)?.domain
+
+    /** Return zero addresses for A/AAAA, and an empty answer for other query types. */
     fun buildSinkholeResponse(queryPayload: ByteArray, queryLength: Int): ByteArray? {
-        if (queryLength < 12) return null
-        val response = ByteBuffer.allocate(queryLength + 16)
-
-        // Copy Transaction ID
-        val txId = ByteBuffer.wrap(queryPayload, 0, 2).short
-        response.putShort(txId)
-
-        // Flags: Standard query response, Authoritative, No error (0x8180) or NXDomain
-        response.putShort(0x8180.toShort())
-
-        // 1 Question, 1 Answer, 0 Authority, 0 Additional
-        response.putShort(1.toShort()) // QDCOUNT
-        response.putShort(1.toShort()) // ANCOUNT
-        response.putShort(0.toShort()) // NSCOUNT
-        response.putShort(0.toShort()) // ARCOUNT
-
-        // Copy Question section from original query
-        val questionBytes = queryPayload.copyOfRange(12, queryLength)
-        response.put(questionBytes)
-
-        // Answer Section:
-        // Name pointer to QNAME at offset 12 (0xC00C)
-        response.putShort(0xC00C.toShort())
-        response.putShort(1.toShort())      // TYPE A
-        response.putShort(1.toShort())      // CLASS IN
-        response.putInt(300)                // TTL (5 minutes)
-        response.putShort(4.toShort())      // RDLENGTH (4 bytes for IPv4)
-        response.put(byteArrayOf(0, 0, 0, 0)) // 0.0.0.0 Sinkhole IP
-
-        return response.array().copyOf(response.position())
+        val q = question(queryPayload, 0, queryLength) ?: return null
+        val addressSize = if (q.recordClass != 1) 0 else when (q.type) { 1 -> 4; 28 -> 16; else -> 0 }
+        val response = ByteBuffer.allocate(q.end + if (addressSize > 0) 12 + addressSize else 0)
+        response.put(queryPayload, 0, 2)
+        response.putShort((0x8080 or ((queryPayload[2].toInt() and 1) shl 8)).toShort())
+        response.putShort(1)
+        response.putShort(if (addressSize > 0) 1 else 0)
+        response.putShort(0)
+        response.putShort(0)
+        response.put(queryPayload, 12, q.end - 12)
+        if (addressSize > 0) {
+            response.putShort(0xC00C.toShort())
+            response.putShort(q.type.toShort())
+            response.putShort(1)
+            response.putInt(300)
+            response.putShort(addressSize.toShort())
+            response.put(ByteArray(addressSize))
+        }
+        return response.array()
     }
 }

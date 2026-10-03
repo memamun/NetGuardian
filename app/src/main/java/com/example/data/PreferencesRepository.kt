@@ -56,6 +56,10 @@ class PreferencesRepository(private val context: Context) {
         return syncPrefs.getBoolean("onboarding_completed", false)
     }
 
+    fun getThemeModeSync(): String {
+        return syncPrefs.getString("theme_mode", "LIGHT") ?: "LIGHT"
+    }
+
     fun hasSyncOnboardingState(): Boolean {
         return syncPrefs.contains("onboarding_completed")
     }
@@ -82,7 +86,11 @@ class PreferencesRepository(private val context: Context) {
     val userPreferencesFlow: Flow<UserPreferences> = context.dataStore.data.map { prefs ->
         val completed = prefs[Keys.ONBOARDING_COMPLETED] ?: false
         if (syncPrefs.getBoolean("onboarding_completed", false) != completed) {
-            syncPrefs.edit().putBoolean("onboarding_completed", completed).commit()
+            syncPrefs.edit().putBoolean("onboarding_completed", completed).apply()
+        }
+        val currentThemeMode = prefs[Keys.THEME_MODE] ?: "LIGHT"
+        if (syncPrefs.getString("theme_mode", null) != currentThemeMode) {
+            syncPrefs.edit().putString("theme_mode", currentThemeMode).apply()
         }
         UserPreferences(
             firewallEnabled = prefs[Keys.FIREWALL_ENABLED] ?: false,
@@ -99,7 +107,7 @@ class PreferencesRepository(private val context: Context) {
                 UpstreamDnsType.SYSTEM_DEFAULT
             },
             customDnsIp = prefs[Keys.CUSTOM_DNS_IP] ?: "192.168.1.1",
-            themeMode = prefs[Keys.THEME_MODE] ?: "LIGHT",
+            themeMode = currentThemeMode,
             activeQuickMode = try {
                 QuickMode.valueOf(prefs[Keys.QUICK_MODE] ?: QuickMode.NORMAL.name)
             } catch (_: Exception) {
@@ -145,6 +153,7 @@ class PreferencesRepository(private val context: Context) {
     }
 
     suspend fun setThemeMode(mode: String) {
+        syncPrefs.edit().putString("theme_mode", mode).apply()
         context.dataStore.edit { it[Keys.THEME_MODE] = mode }
     }
 
@@ -161,7 +170,7 @@ class PreferencesRepository(private val context: Context) {
     }
 
     suspend fun setOnboardingCompleted(completed: Boolean) {
-        syncPrefs.edit().putBoolean("onboarding_completed", completed).commit()
+        syncPrefs.edit().putBoolean("onboarding_completed", completed).apply()
         context.dataStore.edit { it[Keys.ONBOARDING_COMPLETED] = completed }
     }
 

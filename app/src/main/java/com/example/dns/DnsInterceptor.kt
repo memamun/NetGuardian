@@ -1,6 +1,5 @@
 package com.example.dns
 
-import android.util.Log
 import com.example.firewall.ConnectionLogger
 import java.net.InetAddress
 
@@ -51,9 +50,7 @@ class DnsInterceptor(
         // 1. Parse the queried domain
         val domain = DnsPacketParser.parseDomainName(dnsQueryPayload, 0, dnsQueryPayload.size)
         if (domain == null) {
-            Log.w(TAG, "Could not parse domain from DNS query, forwarding blindly")
-            val response = resolver.resolve(dnsQueryPayload, upstreamAddress)
-            return InterceptResult(response, null, false, null)
+            return InterceptResult(null, null, false, "Invalid DNS query")
         }
 
         // 2. Check blocklist
@@ -61,7 +58,6 @@ class DnsInterceptor(
 
         if (matchResult.blocked) {
             // 3. BLOCKED — return sinkhole response
-            Log.d(TAG, "Blocking DNS query for $domain (matched rule: ${matchResult.matchedRule})")
             val sinkholeResponse = DnsPacketParser.buildSinkholeResponse(dnsQueryPayload, dnsQueryPayload.size)
 
             connectionLogger.logConnection(
@@ -79,11 +75,9 @@ class DnsInterceptor(
         }
 
         // 4. PERMITTED — forward to upstream resolver
-        Log.d(TAG, "Forwarding DNS query for $domain to ${upstreamAddress.hostAddress}")
         val response = resolver.resolve(dnsQueryPayload, upstreamAddress)
 
         if (response == null) {
-            Log.w(TAG, "Upstream resolver failed for $domain, returning SERVFAIL")
             val servfailResponse = buildServfailResponse(dnsQueryPayload)
 
             connectionLogger.logConnection(

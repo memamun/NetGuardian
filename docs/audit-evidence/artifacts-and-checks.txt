@@ -1,0 +1,33 @@
+app/build/outputs/apk/debug/app-debug.apk: 18604026 bytes; SHA256 fb58056b2cb3eacff392e504e94c54fddfe5605aa35325b95562cb78a075ca6a
+app/build/outputs/apk/release/app-release-unsigned.apk: 12285894 bytes; SHA256 30f93e352e4138c8e824cd7924ac4b3423bbd19627293a164499f458619113c5
+app/build/outputs/bundle/release/app-release.aab: 11809538 bytes; SHA256 fd01403048ccea95cfee31c0bdfcb181de4df6e3cb49973e372c1aaec151b755
+AAB JAR signature entries: []
+COMMAND: /home/mamun/Android/Sdk/build-tools/36.1.0/zipalign -c -P 16 -v 4 /home/mamun/antigravity/NetGuardian/app/build/outputs/apk/release/app-release-unsigned.apk
+exit=0
+Verification successful
+COMMAND: /home/mamun/Android/Sdk/build-tools/36.1.0/aapt dump permissions /home/mamun/antigravity/NetGuardian/app/build/outputs/apk/release/app-release-unsigned.apk
+exit=0
+package: com.aistudio.netguardian.wzrtqk
+uses-permission: name='android.permission.INTERNET'
+uses-permission: name='android.permission.ACCESS_NETWORK_STATE'
+uses-permission: name='android.permission.CHANGE_NETWORK_STATE'
+uses-permission: name='android.permission.FOREGROUND_SERVICE'
+uses-permission: name='android.permission.FOREGROUND_SERVICE_SPECIAL_USE'
+uses-permission: name='android.permission.POST_NOTIFICATIONS'
+uses-permission: name='android.permission.RECEIVE_BOOT_COMPLETED'
+uses-permission: name='android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS'
+uses-permission: name='android.permission.QUERY_ALL_PACKAGES'
+permission: com.aistudio.netguardian.wzrtqk.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
+uses-permission: name='com.aistudio.netguardian.wzrtqk.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION'
+
+Release manifest app flags: A: android:allowBackup(0x01010280)=(type 0x12)0x0; A: android:usesCleartextTraffic(0x010104ec)=(type 0x12)0x0
+lib/arm64-v8a/libandroidx.graphics.path.so: ELF LOAD alignment ['0x4000', '0x4000', '0x4000']
+lib/arm64-v8a/libdatastore_shared_counter.so: ELF LOAD alignment ['0x4000', '0x4000', '0x4000']
+lib/armeabi-v7a/libandroidx.graphics.path.so: ELF LOAD alignment ['0x4000', '0x4000', '0x4000']
+lib/armeabi-v7a/libdatastore_shared_counter.so: ELF LOAD alignment ['0x4000', '0x4000']
+lib/x86/libandroidx.graphics.path.so: ELF LOAD alignment ['0x4000', '0x4000', '0x4000']
+lib/x86/libdatastore_shared_counter.so: ELF LOAD alignment ['0x4000', '0x4000']
+lib/x86_64/libandroidx.graphics.path.so: ELF LOAD alignment ['0x4000', '0x4000', '0x4000']
+lib/x86_64/libdatastore_shared_counter.so: ELF LOAD alignment ['0x4000', '0x4000']
+Unit tests: {'tests': 116, 'failures': 0, 'errors': 0, 'skipped': 0}
+Lint issues: Counter({('Warning', 'GradleDependency'): 22, ('Warning', 'NewerVersionAvailable'): 13, ('Warning', 'UnusedResources'): 13, ('Warning', 'ObsoleteSdkInt'): 8, ('Warning', 'UseKtx'): 6, ('Warning', 'AndroidGradlePluginVersion'): 2, ('Warning', 'BatteryLife'): 1, ('Warning', 'RedundantLabel'): 1, ('Warning', 'PluralsCandidate'): 1, ('Warning', 'TypographyEllipsis'): 1})

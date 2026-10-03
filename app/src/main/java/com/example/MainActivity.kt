@@ -2,11 +2,15 @@ package com.example
 
 import android.app.Activity
 import android.content.Intent
+import android.content.res.Configuration
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.DisposableEffect
+import com.example.data.PreferencesRepository
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -128,11 +132,31 @@ class MainActivity : ComponentActivity() {
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+        val initialThemeMode = try {
+            PreferencesRepository(this).getThemeModeSync()
+        } catch (_: Exception) {
+            "LIGHT"
+        }
+        val initialDarkTheme = when (initialThemeMode) {
+            "DARK" -> true
+            "LIGHT" -> false
+            else -> (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+        }
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.auto(
+                android.graphics.Color.TRANSPARENT,
+                android.graphics.Color.TRANSPARENT,
+            ) { initialDarkTheme },
+            navigationBarStyle = SystemBarStyle.auto(
+                android.graphics.Color.TRANSPARENT,
+                android.graphics.Color.TRANSPARENT,
+            ) { initialDarkTheme },
+        )
         requestedRoute.value = intent?.getStringExtra(com.example.firewall.FirewallNotificationManager.EXTRA_ROUTE)
 
         setContent {
             mainViewModel = viewModel()
+            val operationError by mainViewModel.operationError.collectAsStateWithLifecycle()
             val firewallActive by mainViewModel.firewallActive.collectAsStateWithLifecycle()
             val snapshot by mainViewModel.firewallSnapshot.collectAsStateWithLifecycle()
             val userPrefs by mainViewModel.userPreferences.collectAsStateWithLifecycle()
@@ -166,7 +190,37 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            NetGuardianTheme {
+            val darkTheme = when (userPrefs.themeMode) {
+                "DARK" -> true
+                "LIGHT" -> false
+                else -> androidx.compose.foundation.isSystemInDarkTheme()
+            }
+
+            DisposableEffect(darkTheme) {
+                enableEdgeToEdge(
+                    statusBarStyle = SystemBarStyle.auto(
+                        android.graphics.Color.TRANSPARENT,
+                        android.graphics.Color.TRANSPARENT,
+                    ) { darkTheme },
+                    navigationBarStyle = SystemBarStyle.auto(
+                        android.graphics.Color.TRANSPARENT,
+                        android.graphics.Color.TRANSPARENT,
+                    ) { darkTheme },
+                )
+                onDispose {}
+            }
+
+            NetGuardianTheme(darkTheme = darkTheme) {
+                operationError?.let { message ->
+                    androidx.compose.material3.AlertDialog(
+                        onDismissRequest = mainViewModel::dismissOperationError,
+                        title = { Text("Storage needs attention") },
+                        text = { Text(message) },
+                        confirmButton = {
+                            androidx.compose.material3.TextButton(onClick = mainViewModel::dismissOperationError) { Text("OK") }
+                        }
+                    )
+                }
                 when (rootNavState) {
                     RootNavState.Loading -> {
                         Surface(

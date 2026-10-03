@@ -175,7 +175,7 @@ fun ProtectionSetupSection(
             PermissionItemRow(
                 icon = Icons.Default.Notifications,
                 title = "Notifications",
-                description = if (!notifRequired) "Automatic on Android ${Build.VERSION.RELEASE}" else if (isNotifGranted) "Persistent status shade indicator permitted" else "Required on Android 13+ for foreground service notification",
+                description = if (!notifRequired) "Automatic on Android ${Build.VERSION.RELEASE}" else if (isNotifGranted) "Persistent status shade indicator permitted" else "Optional: show protection status and alerts",
                 status = if (notifOk) "✓ Enabled" else "! Restricted",
                 isOk = notifOk,
                 actionLabel = if (!notifOk) "Fix" else null,
@@ -186,7 +186,7 @@ fun ProtectionSetupSection(
             PermissionItemRow(
                 icon = Icons.Default.BatterySaver,
                 title = "Battery Optimization",
-                description = if (isBatteryIgnored) "Unrestricted — protection won't be killed in standby" else "Your device may restrict background operation.",
+                description = if (isBatteryIgnored) "Battery exemption enabled; Android may still stop protection" else "Your device may restrict background operation.",
                 status = if (isBatteryIgnored) "✓ Unrestricted" else "! Restricted",
                 isOk = isBatteryIgnored,
                 actionLabel = if (!isBatteryIgnored) "Fix" else null,

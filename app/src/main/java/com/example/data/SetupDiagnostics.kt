@@ -49,7 +49,7 @@ enum class SetupErrorCode(
     ),
     NOTIFICATION_NOT_GRANTED(
         title = "Notifications Disabled",
-        description = "Android requires notification permission so the firewall can maintain its mandatory foreground service notification.",
+        description = "Enable notifications to see protection status and alerts in the notification drawer. Protection can run without this permission.",
         technicalDetail = "POST_NOTIFICATIONS permission not granted (API >= 33).",
         recoveryActionTitle = "Enable Notifications"
     ),
@@ -168,11 +168,11 @@ object DiagnosticsHelper {
             DiagnosticCheck(
                 id = "notifications",
                 title = "Foreground Notifications",
-                description = if (!notifRequired) "Not required on Android ${Build.VERSION.RELEASE}" else if (notifGranted) "Allowed for persistent status indicator" else "Required for foreground service on Android 13+",
+                description = if (!notifRequired) "Not required on Android ${Build.VERSION.RELEASE}" else if (notifGranted) "Allowed for persistent status indicator" else "Optional: enables status and alerts in the notification drawer",
                 status = if (!notifRequired) DiagnosticStatus.NOT_REQUIRED else if (notifGranted) DiagnosticStatus.READY else DiagnosticStatus.NEEDS_ATTENTION,
                 statusLabel = if (!notifRequired) "Not required" else if (notifGranted) "Ready" else "Needs attention",
                 technicalDetail = "POST_NOTIFICATIONS permission status",
-                isRequired = notifRequired,
+                isRequired = false,
                 errorCode = if (notifRequired && !notifGranted) SetupErrorCode.NOTIFICATION_NOT_GRANTED else null
             )
         )
@@ -240,6 +240,10 @@ object DiagnosticsHelper {
     }
 
     fun openAppNotificationSettings(context: Context) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+            openApplicationDetailsSettings(context)
+            return
+        }
         try {
             val intent = Intent().apply {
                 action = Settings.ACTION_APP_NOTIFICATION_SETTINGS
@@ -253,17 +257,10 @@ object DiagnosticsHelper {
 
     fun openBatterySettings(context: Context) {
         try {
-            val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
-                data = Uri.parse("package:${context.packageName}")
-            }
+            val intent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
             context.startActivity(intent)
         } catch (_: Exception) {
-            try {
-                val intent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
-                context.startActivity(intent)
-            } catch (_: Exception) {
-                openApplicationDetailsSettings(context)
-            }
+            openApplicationDetailsSettings(context)
         }
     }
 

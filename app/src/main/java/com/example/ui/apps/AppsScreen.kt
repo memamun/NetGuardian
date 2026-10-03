@@ -649,11 +649,11 @@ fun AppsScreen(
                     ) { appItem ->
                         AppItemCard(
                             app = appItem,
-                            onToggleBlock = remember(appItem.packageName) { { viewModel.toggleAppBlock(appItem.rule) } },
-                            onToggleWifi = remember(appItem.packageName) { { viewModel.toggleAppWifi(appItem.rule) } },
-                            onToggleMobile = remember(appItem.packageName) { { viewModel.toggleAppMobile(appItem.rule) } },
-                            onToggleBackground = remember(appItem.packageName) { { viewModel.toggleAppBackground(appItem.rule) } },
-                            onClick = remember(appItem.packageName) { { selectedAppForDetail = appItem } }
+                            onToggleBlock = remember(appItem.rule) { { viewModel.toggleAppBlock(appItem.rule) } },
+                            onToggleWifi = remember(appItem.rule) { { viewModel.toggleAppWifi(appItem.rule) } },
+                            onToggleMobile = remember(appItem.rule) { { viewModel.toggleAppMobile(appItem.rule) } },
+                            onToggleBackground = remember(appItem.rule) { { viewModel.toggleAppBackground(appItem.rule) } },
+                            onClick = remember(appItem) { { selectedAppForDetail = appItem } }
                         )
                     }
                 }

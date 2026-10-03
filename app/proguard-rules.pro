@@ -25,11 +25,14 @@
 -keepnames class kotlinx.coroutines.CoroutineExceptionHandler {}
 -dontwarn kotlinx.coroutines.**
 
-# VPN & Firewall Services and Broadcast Receivers
+# VPN & Firewall Services, Quick Settings Tiles, and Broadcast Receivers
 -keep class com.example.firewall.FirewallVpnService { *; }
 -keep class com.example.firewall.BootReceiver { *; }
--keep class com.example.firewall.PackageChangeReceiver { *; }
--keep class com.example.quicksettings.** { *; }
+-keep class * extends android.service.quicksettings.TileService { *; }
+-keep class com.example.firewall.*TileService { *; }
+
+# Data models and preferences
+-keep class com.example.data.** { *; }
 
 # Compose Runtime
 -keep class androidx.compose.runtime.** { *; }
