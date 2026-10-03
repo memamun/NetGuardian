@@ -197,10 +197,18 @@ class FirewallVpnService : VpnService() {
         }
 
         // Post foreground notification immediately to satisfy Android startForegroundService contract
-        startForeground(
-            FirewallNotificationManager.NOTIFICATION_ID_FOREGROUND,
-            notificationManager.buildForegroundNotification(stateRepo.state.value)
-        )
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            startForeground(
+                FirewallNotificationManager.NOTIFICATION_ID_FOREGROUND,
+                notificationManager.buildForegroundNotification(stateRepo.state.value),
+                android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+            )
+        } else {
+            startForeground(
+                FirewallNotificationManager.NOTIFICATION_ID_FOREGROUND,
+                notificationManager.buildForegroundNotification(stateRepo.state.value)
+            )
+        }
         notificationManager.dismissAlertNotifications()
 
         // Verify VPN permission first
