@@ -54,10 +54,11 @@ jobs:
               -storepass netguardian123 -keypass netguardian123 \
               -dname "CN=NetGuardian, OU=Security, O=NetGuardian, L=City, ST=State, C=US"
           fi
+          cp release.keystore app/release.keystore
 
       - name: Build Release APK & Bundle
         env:
-          KEYSTORE_PATH: release.keystore
+          KEYSTORE_PATH: ${{ github.workspace }}/release.keystore
           STORE_PASSWORD: ${{ secrets.STORE_PASSWORD || 'netguardian123' }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS || 'netguardian' }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD || 'netguardian123' }}
