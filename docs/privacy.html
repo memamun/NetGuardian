@@ -253,10 +253,11 @@
 
             <h2>5. Permissions & Android System Access</h2>
             <ul>
-                <li><code>BIND_VPN_SERVICE</code>: Required by Android to create the local TUN firewall interface.</li>
-                <li><code>INTERNET</code>: Required to send permitted traffic and resolve upstream DNS.</li>
+                <li><code>BIND_VPN_SERVICE</code>: Required by Android to create the local on-device TUN firewall interface for packet inspection.</li>
+                <li><code>QUERY_ALL_PACKAGES</code>: Scans installed packages locally to configure per-app Wi-Fi and Cellular blocking rules across all applications. Package inventory is never transmitted off your device.</li>
+                <li><code>FOREGROUND_SERVICE</code> & <code>FOREGROUND_SERVICE_SPECIAL_USE</code>: Keeps the local packet filtering engine operating reliably in the background with persistent notification visibility.</li>
+                <li><code>INTERNET</code>: Required to send permitted traffic and resolve upstream DNS lookups.</li>
                 <li><code>ACCESS_NETWORK_STATE</code>: Detects whether your active connection is Wi-Fi or Cellular to apply your custom firewall rules.</li>
-                <li><code>FOREGROUND_SERVICE</code>: Keeps the local firewall running reliably while your screen is off.</li>
                 <li><code>POST_NOTIFICATIONS</code>: Displays the active firewall status notification and Quick Action toggles.</li>
                 <li><code>RECEIVE_BOOT_COMPLETED</code>: Automatically starts firewall protection on phone reboot (optional, controlled by user).</li>
             </ul>

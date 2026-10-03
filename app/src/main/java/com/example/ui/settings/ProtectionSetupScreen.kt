@@ -33,6 +33,7 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.VpnKey
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -86,6 +87,7 @@ fun ProtectionSetupSection(
     var isNotifGranted by remember { mutableStateOf(DiagnosticsHelper.isNotificationGranted(context)) }
     var isBatteryIgnored by remember { mutableStateOf(DiagnosticsHelper.isBatteryOptimizationIgnored(context)) }
     var isAppQueryOk by remember { mutableStateOf(DiagnosticsHelper.canQueryInstalledApps(context)) }
+    var showVpnDisclosure by remember { mutableStateOf(false) }
 
     fun refreshStates() {
         isVpnAuth = DiagnosticsHelper.isVpnAuthorized(context)
@@ -166,8 +168,62 @@ fun ProtectionSetupSection(
                 status = if (firewallActive || isVpnAuth) "✓ Enabled" else "! Requires Auth",
                 isOk = isVpnAuth,
                 actionLabel = if (!isVpnAuth) "Authorize" else null,
-                onAction = { onRequestVpn() }
+                onAction = { showVpnDisclosure = true }
             )
+
+            if (showVpnDisclosure) {
+                AlertDialog(
+                    onDismissRequest = { showVpnDisclosure = false },
+                    icon = {
+                        Icon(
+                            Icons.Default.Security,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(32.dp)
+                        )
+                    },
+                    title = {
+                        Text(
+                            text = "Local VPN Firewall",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                        )
+                    },
+                    text = {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text(
+                                text = "NetGuardian requires Android VPN authorization to establish a local on-device network filter. This allows you to block Wi-Fi and mobile data per app.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "• 100% on-device processing\n• No remote VPN or proxy servers\n• Zero tracking or data collection",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    },
+                    confirmButton = {
+                        Button(
+                            onClick = {
+                                showVpnDisclosure = false
+                                onRequestVpn()
+                            },
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
+                            Text("Continue to System Prompt")
+                        }
+                    },
+                    dismissButton = {
+                        OutlinedButton(
+                            onClick = { showVpnDisclosure = false },
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
+                            Text(stringResource(R.string.ui_cancel))
+                        }
+                    }
+                )
+            }
 
             // 2. Notifications
             val notifRequired = DiagnosticsHelper.isNotificationRequired()
